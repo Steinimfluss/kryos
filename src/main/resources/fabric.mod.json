@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "kryos",
+	"version": "${version}",
+	"name": "kryos",
+	"description": "",
+	"authors": [
+		"Steinimfluss"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "CC0-1.0",
+	"icon": "assets/kryos/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"net.kryos.Kryos"
+		]
+	},
+	"mixins": [
+		"kryos.mixins.json"
+	],
+	"depends": {
+		"fabricloader": ">=0.18.5",
+		"minecraft": "~26.1",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
