@@ -7,6 +7,7 @@ import net.kryos.feature.FeatureCategory;
 import net.kryos.gui.component.impl.CategoryPanel;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
@@ -45,6 +46,12 @@ public class ClickGui extends Screen {
     	}
     	
     	return super.mouseClicked(event, doubleClick);
+    }
+    
+    @Override
+    public boolean keyPressed(KeyEvent event) {
+    	categoryPanels.forEach(panel -> panel.keyPressed(event));
+    	return super.keyPressed(event);
     }
     
     @Override

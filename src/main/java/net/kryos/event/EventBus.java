@@ -6,17 +6,17 @@ import java.util.List;
 import net.kryos.event.listener.EventListener;
 
 public class EventBus {
-	private final List<EventListener> listeners = new ArrayList<>();
-	
-	public void post(Event event) {
-		listeners.forEach(listener -> {
-			if(event.getListenerType().isInstance(listener)) {
-				event.post(listener);
-			}
-		});
-	}
-	
-	public void subscribe(EventListener listener) {
-		listeners.add(listener);
-	}
+    private final List<EventListener> listeners = new ArrayList<>();
+
+    public <T extends EventListener> void post(Event<T> event) {
+        for (EventListener listener : listeners) {
+            if (event.getListenerType().isInstance(listener)) {
+                event.post(event.getListenerType().cast(listener));
+            }
+        }
+    }
+
+    public void subscribe(EventListener listener) {
+        listeners.add(listener);
+    }
 }

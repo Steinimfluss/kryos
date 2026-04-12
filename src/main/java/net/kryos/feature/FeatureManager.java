@@ -3,7 +3,11 @@ package net.kryos.feature;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FeatureManager {
+import net.kryos.event.impl.KeyPressEvent;
+import net.kryos.event.listener.impl.KeyPressListener;
+import net.kryos.feature.impl.TestFeature;
+
+public class FeatureManager implements KeyPressListener {
     private final List<Feature> features = new ArrayList<>();
 
     public FeatureManager() {
@@ -11,7 +15,7 @@ public class FeatureManager {
     }
 
     private void loadFeatures() {
-    	
+    	features.add(new TestFeature());
     }
 
     public List<Feature> getFeatures() {
@@ -36,4 +40,15 @@ public class FeatureManager {
         }
         return list;
     }
+
+	@Override
+	public void onKeyPress(KeyPressEvent event) {
+		if(event.getAction() == 1) {
+			features.forEach(feature -> {
+				if(feature.getKey() == event.getEvent().key()) {
+					feature.toggle();
+				}
+			});
+		}
+	}
 }

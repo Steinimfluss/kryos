@@ -9,6 +9,7 @@ import net.kryos.feature.FeatureCategory;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.component.Component;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 
 public class CategoryPanel extends Component {
@@ -90,5 +91,10 @@ public class CategoryPanel extends Component {
     	featureButtons.forEach(featureButton -> featureButton.mouseReleased(event));
     	
         dragging = false;
+    }
+    
+    @Override
+    public void keyPressed(KeyEvent event) {
+    	featureButtons.forEach(featureButton -> featureButton.keyPressed(event));
     }
 }

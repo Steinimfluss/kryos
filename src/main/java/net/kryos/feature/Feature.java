@@ -5,8 +5,9 @@ import net.kryos.feature.setting.Setting;
 public abstract class Feature {	
 	public final String name;
 	private boolean enabled;
-	private Setting[] settings;
+	private Setting[] settings = new Setting[0];
 	public final FeatureCategory category;
+	private int key = -1;
 	
 	public Feature(String name, FeatureCategory category) {
 		this.name = name;
@@ -39,5 +40,13 @@ public abstract class Feature {
 
 	public boolean isEnabled() {
 		return enabled;
+	}
+	
+	public int getKey() {
+		return key;
+	}
+	
+	public void setKey(int key) {
+		this.key = key;
 	}
 }

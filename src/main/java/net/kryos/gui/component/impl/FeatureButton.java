@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.lwjgl.glfw.GLFW;
+
 import net.kryos.feature.Feature;
 import net.kryos.feature.setting.BooleanSetting;
 import net.kryos.feature.setting.ModeSetting;
@@ -12,6 +14,7 @@ import net.kryos.feature.setting.Setting;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.component.Component;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 
 public class FeatureButton extends Component {
@@ -22,6 +25,7 @@ public class FeatureButton extends Component {
 	
 	private Feature feature;
 	private boolean expanded;
+	private boolean binding;
 	
 	public FeatureButton(Feature feature) {
 		this.feature = feature;
@@ -44,8 +48,10 @@ public class FeatureButton extends Component {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         graphics.fill(x, y, x + width, y + height, feature.isEnabled() ? MainTheme.PRIMARY : MainTheme.SECONDARY);
         graphics.centeredText(font, feature.name, x + width / 2, y + baseHeight / 2 - font.lineHeight / 2, -1);
-        if(settingComponents.size() > 0)
-        	graphics.text(font, expanded ? "-" : "+", x + width - font.width("+") - 4, y + baseHeight / 2 - font.lineHeight / 2, -1);
+        
+        String bindText = "[" + (binding ? ".." : GLFW.glfwGetKeyName(feature.getKey(), 0)) + "]";
+        if(feature.getKey() != -1 || binding)
+        	graphics.text(font, bindText, x + width - font.width(bindText) - 4, y + baseHeight / 2 - font.lineHeight / 2, -1);
         
         int yOffset = baseHeight;
         if(expanded) {
@@ -66,6 +72,7 @@ public class FeatureButton extends Component {
 	
 	@Override
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+		binding = false;
 		if(expanded) {
 			for(Component settingComponent : settingComponents) {
 				if(settingComponent.mouseClicked(event, doubleClick)) {
@@ -83,6 +90,9 @@ public class FeatureButton extends Component {
 				if(settingComponents.size() > 0)
 					expanded = !expanded;
 				return true;
+			case 2:
+				binding = true;
+				return true;
 			}
 		}
 		
@@ -91,6 +101,17 @@ public class FeatureButton extends Component {
 	
 	@Override
 	public void mouseReleased(MouseButtonEvent event) {
+		if(event.button() != 2)
+			binding = false;
+		
 		settingComponents.forEach(settingComponent -> settingComponent.mouseReleased(event));
+	}
+	
+	@Override
+	public void keyPressed(KeyEvent event) {
+		if(binding && GLFW.glfwGetKeyName(event.key(), 0) != null) {
+			feature.setKey(event.key());
+			binding = false;
+		}
 	}
 }

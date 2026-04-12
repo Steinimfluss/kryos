@@ -2,7 +2,9 @@
 	"required": true,
 	"package": "net.kryos.mixin",
 	"compatibilityLevel": "JAVA_25",
-	"mixins": [],
+	"mixins": [
+		"KeyboardHandlerMixin"
+	],
 	"injectors": {
 		"defaultRequire": 1
 	},

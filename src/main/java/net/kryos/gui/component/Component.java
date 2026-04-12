@@ -3,6 +3,7 @@ package net.kryos.gui.component;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 
 public abstract class Component {
@@ -35,6 +36,10 @@ public abstract class Component {
 	}
 	
     public void mouseScrolled(double x, double y, double scrollX, double scrollY) {
+    	
+    }
+
+    public void keyPressed(KeyEvent event) {
     	
     }
 	
