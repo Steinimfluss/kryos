@@ -10,13 +10,13 @@ import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.NumberSetting;
 
 public class ViewModel extends Feature implements RenderArmWithItemListener {
-	private NumberSetting<Float> xOffset = new NumberSetting<Float>("X Offset", 0F, -5F, 5F, 0.1F);
-	private NumberSetting<Float> yOffset = new NumberSetting<Float>("Y Offset", 0F, -5F, 5F, 0.1F);
-	private NumberSetting<Float> zOffset = new NumberSetting<Float>("Z Offset", 0F, -5F, 5F, 0.1F);
+	private NumberSetting<Float> xOffset = new NumberSetting<Float>("X Offset", 0F, -5F, 5F, 0.01F);
+	private NumberSetting<Float> yOffset = new NumberSetting<Float>("Y Offset", 0F, -5F, 5F, 0.01F);
+	private NumberSetting<Float> zOffset = new NumberSetting<Float>("Z Offset", 0F, -5F, 5F, 0.01F);
 
-	private NumberSetting<Float> xScale = new NumberSetting<Float>("X Scale", 1F, 0F, 5F, 0.1F);
-	private NumberSetting<Float> yScale = new NumberSetting<Float>("Y Scale", 1F, 0F, 5F, 0.1F);
-	private NumberSetting<Float> zScale = new NumberSetting<Float>("Z Scale", 1F, 0F, 5F, 0.1F);
+	private NumberSetting<Float> xScale = new NumberSetting<Float>("X Scale", 1F, 0F, 5F, 0.01F);
+	private NumberSetting<Float> yScale = new NumberSetting<Float>("Y Scale", 1F, 0F, 5F, 0.01F);
+	private NumberSetting<Float> zScale = new NumberSetting<Float>("Z Scale", 1F, 0F, 5F, 0.01F);
 	
 	public ViewModel() {
 		super("ViewModel", FeatureCategory.RENDER);

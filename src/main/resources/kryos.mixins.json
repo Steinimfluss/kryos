@@ -5,7 +5,8 @@
 	"mixins": [
 		"KeyboardHandlerMixin",
 		"GuiMixin",
-		"ItemInHandRendererMixin"
+		"ItemInHandRendererMixin",
+		"FogRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
