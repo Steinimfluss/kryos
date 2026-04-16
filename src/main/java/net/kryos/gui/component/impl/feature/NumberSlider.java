@@ -1,4 +1,4 @@
-package net.kryos.gui.component.impl;
+package net.kryos.gui.component.impl.feature;
 
 import net.kryos.feature.setting.NumberSetting;
 import net.kryos.gui.MainTheme;
@@ -8,7 +8,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 public class NumberSlider extends Component {
     private static final int WIDTH = 100;
-    private static final int HEIGHT = 14;
+    private static final int HEIGHT = 15;
 
     private final NumberSetting<?> setting;
     private boolean dragging = false;
@@ -37,7 +37,7 @@ public class NumberSlider extends Component {
         double percent = (setting.getValue().doubleValue() - setting.min.doubleValue()) / range;
 
         int fillWidth = (int) (percent * (width - 16));
-        graphics.fill(vx1, y, vx1 + fillWidth, y + height, MainTheme.PRIMARY);
+        graphics.fill(vx1, y, vx1 + fillWidth, y + height, MainTheme.SELECTED);
     }
 
     @Override

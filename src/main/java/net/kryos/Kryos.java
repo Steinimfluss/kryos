@@ -1,45 +1,53 @@
 package net.kryos;
 
+import java.nio.file.Path;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.loader.api.FabricLoader;
+import net.kryos.config.ConfigManager;
 import net.kryos.event.EventBus;
 import net.kryos.feature.FeatureManager;
-import net.kryos.gui.ClickGui;
-import net.minecraft.client.Minecraft;
 import net.minecraft.resources.Identifier;
 
 public class Kryos implements ModInitializer {
     public static final String MOD_ID = "kryos";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
+    public static final Path CONFIG_PATH = FabricLoader.getInstance().getConfigDir().resolve("kryos");
 
     public static FeatureManager featureManager;
     public static EventBus eventBus;
-
-    private boolean wasPressed = false;
+    public static ConfigManager configManager;
 
     @Override
     public void onInitialize() {
+    	LOGGER.info("Starting...");
+    	configManager = new ConfigManager();
+    	
         featureManager = new FeatureManager();
         eventBus = new EventBus();
         
         eventBus.subscribe(featureManager);
+    	
+    	try {
+			configManager.loadCurrent();
+		} catch (Exception e) {
+	    	LOGGER.error("Failed to load config: " + e);
+			e.printStackTrace();
+		}
         
-        ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.player == null) return;
-
-            boolean pressed = org.lwjgl.glfw.GLFW.glfwGetKey(
-                    Minecraft.getInstance().getWindow().handle(),
-                    org.lwjgl.glfw.GLFW.GLFW_KEY_RIGHT_SHIFT
-            ) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-
-            if (pressed && !wasPressed) {
-                client.setScreen(new ClickGui());
-            }
-
-            wasPressed = pressed;
+        ClientLifecycleEvents.CLIENT_STOPPING.register(_ -> {
+        	LOGGER.info("Stopping...");
+        	
+        	try {
+				configManager.saveCurrent();
+			} catch (Exception e) {
+		    	LOGGER.error("Failed to save config: " + e);
+				e.printStackTrace();
+			}
         });
     }
     

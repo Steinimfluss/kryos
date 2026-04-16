@@ -3,6 +3,7 @@ package net.kryos.gui.component;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 
@@ -30,6 +31,10 @@ public abstract class Component {
 	public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
 		return false;
 	}
+	
+    public void charTyped(CharacterEvent event) {
+    	
+    }
 	
 	public void mouseReleased(MouseButtonEvent event) {
 		

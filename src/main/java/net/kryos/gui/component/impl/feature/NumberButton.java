@@ -1,4 +1,4 @@
-package net.kryos.gui.component.impl;
+package net.kryos.gui.component.impl.feature;
 
 import net.kryos.feature.setting.NumberSetting;
 import net.kryos.gui.component.Component;

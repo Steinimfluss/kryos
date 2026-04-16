@@ -1,4 +1,4 @@
-package net.kryos.gui.component.impl;
+package net.kryos.gui.component.impl.feature;
 
 import net.kryos.feature.setting.NumberSetting;
 import net.kryos.gui.MainTheme;
@@ -8,7 +8,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 public class NumberPanel extends Component {
 	private static final int WIDTH = 100;
-	private static final int HEIGHT = 20;
+	private static final int HEIGHT = 10;
 	
 	private final NumberSetting<?> setting;
 	private final NumberSlider slider;
@@ -29,15 +29,10 @@ public class NumberPanel extends Component {
 	
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        graphics.fill(x, y, x + width, y + height, MainTheme.SECONDARY);
-        
-        graphics.text(font, setting.name, x + 4, y + baseHeight / 2 - font.lineHeight / 2, -1);
-        graphics.text(font, setting.getValue().toString(), x + width - font.width(setting.getValue().toString()) - 4, y + baseHeight / 2 - font.lineHeight / 2, -1);
+        graphics.fill(x + 2, y, x + width - 2, y + height, MainTheme.SECONDARY);
         
         slider.x = this.x;
-        slider.y = this.y + baseHeight;
-        
-        slider.extractRenderState(graphics, mouseX, mouseY, a);
+        slider.y = this.y;
         
         decrementButton.x = this.x;
         incrementButton.x = this.x + width - incrementButton.width;
@@ -47,6 +42,11 @@ public class NumberPanel extends Component {
         
         decrementButton.extractRenderState(graphics, mouseX, mouseY, a);
         incrementButton.extractRenderState(graphics, mouseX, mouseY, a);
+        
+        slider.extractRenderState(graphics, mouseX, mouseY, a);
+        
+        graphics.text(font, setting.name, x + 10, y + baseHeight / 2 - font.lineHeight / 2, -1);
+        graphics.text(font, setting.getValue().toString(), x + width - font.width(setting.getValue().toString()) - 10, y + baseHeight / 2 - font.lineHeight / 2, -1);
 	}
 	
 	@Override

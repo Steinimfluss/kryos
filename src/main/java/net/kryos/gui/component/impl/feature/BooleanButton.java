@@ -1,4 +1,4 @@
-package net.kryos.gui.component.impl;
+package net.kryos.gui.component.impl.feature;
 
 import net.kryos.feature.setting.BooleanSetting;
 import net.kryos.gui.MainTheme;
@@ -8,7 +8,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 public class BooleanButton extends Component {
 	private static final int WIDTH = 100;
-	private static final int HEIGHT = 20;
+	private static final int HEIGHT = 15;
 	
 	private BooleanSetting setting;
 	
@@ -20,9 +20,9 @@ public class BooleanButton extends Component {
 	
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
-        graphics.fill(x, y, x + width, y + height, MainTheme.SECONDARY);
+        graphics.fill(x + 2, y, x + width - 2, y + height, MainTheme.SECONDARY);
         
-        graphics.centeredText(font, setting.name, x + width / 2, y + height / 2 - font.lineHeight / 2, -1);
+        graphics.text(font, setting.name, x + 4, y + height / 2 - font.lineHeight / 2, -1);
         graphics.text(font, setting.enabled ? "☑" : "☐", x + width - font.width("☐") - 4, y + height / 2 - font.lineHeight / 2, -1);
 	}
 	

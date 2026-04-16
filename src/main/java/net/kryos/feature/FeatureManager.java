@@ -5,17 +5,19 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
-import net.kryos.feature.impl.TestFeature;
+import net.kryos.feature.impl.ClickGui;
+import net.kryos.feature.impl.Killaura;
 
 public class FeatureManager implements KeyPressListener {
     private final List<Feature> features = new ArrayList<>();
-
+    
     public FeatureManager() {
         loadFeatures();
     }
 
     private void loadFeatures() {
-    	features.add(new TestFeature());
+    	features.add(new ClickGui());
+    	features.add(new Killaura());
     }
 
     public List<Feature> getFeatures() {
@@ -45,7 +47,7 @@ public class FeatureManager implements KeyPressListener {
 	public void onKeyPress(KeyPressEvent event) {
 		if(event.getAction() == 1) {
 			features.forEach(feature -> {
-				if(feature.getKey() == event.getEvent().key()) {
+				if(feature.getKey() == event.getEvent().input()) {
 					feature.toggle();
 				}
 			});

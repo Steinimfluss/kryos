@@ -1,8 +1,10 @@
 package net.kryos.feature;
 
 import net.kryos.feature.setting.Setting;
+import net.minecraft.client.Minecraft;
 
-public abstract class Feature {	
+public abstract class Feature {
+	protected static final Minecraft mc = Minecraft.getInstance();
 	public final String name;
 	private boolean enabled;
 	private Setting[] settings = new Setting[0];

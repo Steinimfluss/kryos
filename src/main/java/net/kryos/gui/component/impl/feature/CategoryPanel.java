@@ -1,4 +1,4 @@
-package net.kryos.gui.component.impl;
+package net.kryos.gui.component.impl.feature;
 
 import java.awt.Color;
 import java.util.ArrayList;
@@ -14,12 +14,11 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 public class CategoryPanel extends Component {
 	private static final int WIDTH = 100;
-	private static final int HEIGHT = 20;
+	private static final int HEIGHT = 15;
 	
     private final FeatureCategory category;
-    private final List<FeatureButton> featureButtons = new ArrayList<FeatureButton>();
+    private final List<FeaturePanel> featureButtons = new ArrayList<FeaturePanel>();
 
-    private boolean expanded;
     private boolean dragging;
     private int dragOffsetX;
     private int dragOffsetY;
@@ -32,7 +31,7 @@ public class CategoryPanel extends Component {
         this.height = HEIGHT;
         this.baseHeight = HEIGHT;
         
-        Kryos.featureManager.getFeaturesByCategory(category).forEach(feature -> featureButtons.add(new FeatureButton(feature)));
+        Kryos.featureManager.getFeaturesByCategory(category).forEach(feature -> featureButtons.add(new FeaturePanel(feature)));
     }
 
     @Override
@@ -42,32 +41,25 @@ public class CategoryPanel extends Component {
             this.y = mouseY - dragOffsetY;
         }
 
-        graphics.fill(x, y, x + width, y + height, MainTheme.TERTIARY);
+        graphics.fill(x, y, x + width, y + height, MainTheme.SELECTED);
         graphics.centeredText(font, category.name, x + width / 2, y + baseHeight / 2 - font.lineHeight / 2, -1);
-        
-        if(featureButtons.size() > 0)
-        	graphics.text(font, expanded ? "-" : "+", x + width - font.width(" ") - 6, y + baseHeight / 2 - font.lineHeight / 2, -1);
-        
+       
         int yOffset = baseHeight;
-        if(expanded) {
-        	for(FeatureButton featureButton : featureButtons) {
-        		featureButton.x = this.x;
-        		featureButton.y = this.y + yOffset;
-        		featureButton.extractRenderState(graphics, mouseX, mouseY, a);
-        		yOffset += featureButton.height;
-        	}
-        	graphics.fillGradient(x, y + baseHeight, x + width, y + baseHeight + 10, new Color(0, 0, 0, 100).getRGB(), new Color(0, 0, 0, 0).getRGB());
-        }
+    	for(FeaturePanel featureButton : featureButtons) {
+    		featureButton.x = this.x;
+    		featureButton.y = this.y + yOffset;
+    		featureButton.extractRenderState(graphics, mouseX, mouseY, a);
+    		yOffset += featureButton.height;
+    	}
+    	graphics.fillGradient(x, y + baseHeight, x + width, y + baseHeight + 10, new Color(0, 0, 0, 100).getRGB(), new Color(0, 0, 0, 0).getRGB());
         this.height = yOffset;
     }
 
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
-        if(expanded) {
-        	for(FeatureButton featureButton : featureButtons) {
-        		if(featureButton.mouseClicked(event, doubleClick)) return true;
-        	}
-        }
+    	for(FeaturePanel featureButton : featureButtons) {
+    		if(featureButton.mouseClicked(event, doubleClick)) return true;
+    	}
         
         if (isHovered(event.x(), event.y())) {
         	switch(event.button()) {
@@ -76,10 +68,6 @@ public class CategoryPanel extends Component {
                 dragOffsetX = (int)event.x() - x;
                 dragOffsetY = (int)event.y() - y;
                 return true;
-        	case 1:
-        		if(featureButtons.size() > 0)
-        			expanded = !expanded;
-        		return true;
         	}
         }
         
