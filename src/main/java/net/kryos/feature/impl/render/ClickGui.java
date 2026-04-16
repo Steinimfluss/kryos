@@ -1,4 +1,4 @@
-package net.kryos.feature.impl;
+package net.kryos.feature.impl.render;
 
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
