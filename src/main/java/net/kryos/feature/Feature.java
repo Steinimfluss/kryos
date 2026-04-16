@@ -2,7 +2,6 @@ package net.kryos.feature;
 
 import net.kryos.feature.setting.Setting;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 
 public abstract class Feature {
 	protected static final Minecraft mc = Minecraft.getInstance();
