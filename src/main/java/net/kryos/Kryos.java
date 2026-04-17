@@ -11,6 +11,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.kryos.config.ConfigManager;
 import net.kryos.event.EventBus;
 import net.kryos.feature.FeatureManager;
+import net.kryos.rotation.RotationBus;
 import net.minecraft.resources.Identifier;
 
 public class Kryos implements ModInitializer {
@@ -21,6 +22,7 @@ public class Kryos implements ModInitializer {
     public static FeatureManager featureManager;
     public static EventBus eventBus;
     public static ConfigManager configManager;
+    public static RotationBus rotationBus;
 
     @Override
     public void onInitialize() {
@@ -31,7 +33,10 @@ public class Kryos implements ModInitializer {
         eventBus = new EventBus();
         
         eventBus.subscribe(featureManager);
-    	
+        
+        rotationBus = new RotationBus();
+        eventBus.subscribe(rotationBus);
+        
     	try {
 			configManager.loadCurrent();
 		} catch (Exception e) {

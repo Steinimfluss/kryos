@@ -5,6 +5,8 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
+import net.kryos.feature.impl.combat.Killaura;
+import net.kryos.feature.impl.misc.RotationFeature;
 import net.kryos.feature.impl.render.ClickGui;
 import net.kryos.feature.impl.render.FeatureList;
 import net.kryos.feature.impl.render.Fog;
@@ -14,16 +16,26 @@ import net.kryos.feature.impl.render.ViewModel;
 public class FeatureManager implements KeyPressListener {
     private final List<Feature> features = new ArrayList<>();
     
+    public ClickGui clickGui = new ClickGui();
+    public FeatureList featureList = new FeatureList();
+    public Fog fog = new Fog();
+    public ViewModel viewModel = new ViewModel();
+    public NoRender noRender = new NoRender();
+    public Killaura killaura = new Killaura();
+    public RotationFeature rotationFeature = new RotationFeature();
+    
     public FeatureManager() {
         loadFeatures();
     }
 
     private void loadFeatures() {
-    	features.add(new ClickGui());
-    	features.add(new FeatureList());
-    	features.add(new Fog());
-    	features.add(new ViewModel());
-    	features.add(new NoRender());
+    	features.add(clickGui);
+    	features.add(featureList);
+    	features.add(fog);
+    	features.add(viewModel);
+    	features.add(noRender);
+    	features.add(killaura);
+    	features.add(rotationFeature);
     }
 
     public List<Feature> getFeatures() {

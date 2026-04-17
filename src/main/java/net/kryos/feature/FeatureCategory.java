@@ -1,7 +1,9 @@
 package net.kryos.feature;
 
 public enum FeatureCategory {
-	RENDER("Render");
+	COMBAT("Combat"),
+	RENDER("Render"),
+	MISC("Misc");
 	
 	public final String name;
 	

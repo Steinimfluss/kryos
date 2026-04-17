@@ -7,7 +7,10 @@
 		"GuiMixin",
 		"ItemInHandRendererMixin",
 		"FogRendererMixin",
-		"AbstractClientPlayerMixin"
+		"AbstractClientPlayerMixin",
+		"LocalPlayerMixin",
+		"AvatarRendererMixin",
+		"LivingEntityMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

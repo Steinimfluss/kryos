@@ -9,7 +9,7 @@ public class EventBus {
     private final List<EventListener> listeners = new ArrayList<>();
 
     public <T extends EventListener> void post(Event<T> event) {
-        for (EventListener listener : listeners) {
+        for (EventListener listener : new ArrayList<>(listeners)) {
             if (event.getListenerType().isInstance(listener)) {
                 event.post(event.getListenerType().cast(listener));
             }
