@@ -8,6 +8,7 @@ import net.kryos.event.listener.impl.KeyPressListener;
 import net.kryos.feature.impl.render.ClickGui;
 import net.kryos.feature.impl.render.FeatureList;
 import net.kryos.feature.impl.render.Fog;
+import net.kryos.feature.impl.render.NoRender;
 import net.kryos.feature.impl.render.ViewModel;
 
 public class FeatureManager implements KeyPressListener {
@@ -22,6 +23,7 @@ public class FeatureManager implements KeyPressListener {
     	features.add(new FeatureList());
     	features.add(new Fog());
     	features.add(new ViewModel());
+    	features.add(new NoRender());
     }
 
     public List<Feature> getFeatures() {

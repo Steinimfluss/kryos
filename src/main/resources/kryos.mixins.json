@@ -6,7 +6,8 @@
 		"KeyboardHandlerMixin",
 		"GuiMixin",
 		"ItemInHandRendererMixin",
-		"FogRendererMixin"
+		"FogRendererMixin",
+		"AbstractClientPlayerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
