@@ -12,7 +12,9 @@
 		"AvatarRendererMixin",
 		"LivingEntityMixin",
 		"ClientInputAccessor",
-		"KeyboardInputMixin"
+		"KeyboardInputMixin",
+		"ClientPacketListenerMixin",
+		"ClientboundSetEntityMotionPacketAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

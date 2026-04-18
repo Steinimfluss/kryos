@@ -5,6 +5,8 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
+import net.kryos.feature.impl.combat.Offhand;
+import net.kryos.feature.impl.combat.Velocity;
 import net.kryos.feature.impl.combat.Killaura;
 import net.kryos.feature.impl.misc.RotationFeature;
 import net.kryos.feature.impl.render.ClickGui;
@@ -25,6 +27,8 @@ public class FeatureManager implements KeyPressListener {
     public NoRender noRender = new NoRender();
     public Killaura killaura = new Killaura();
     public RotationFeature rotationFeature = new RotationFeature();
+    public Offhand offhand = new Offhand();
+    public Velocity velocity = new Velocity();
     
     public FeatureManager() {
         loadFeatures();
@@ -38,6 +42,8 @@ public class FeatureManager implements KeyPressListener {
     	features.add(noRender);
     	features.add(killaura);
     	features.add(rotationFeature);
+    	features.add(offhand);
+    	features.add(velocity);
     }
 
     public List<Feature> getFeatures() {

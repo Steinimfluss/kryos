@@ -17,7 +17,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 
 public class Killaura extends Feature implements PlayerTickListener, Rotator {
-	private ModeSetting swingMode = new ModeSetting("Swing", "Client", "Client", "Server", "None");
+	private ModeSetting swingMode = new ModeSetting("Swing", "Client", "Client", "None");
 	private ModeSetting sortMode = new ModeSetting("Sort", "Distance", "Distance", "Health");
 
 	private BooleanSetting keepRotation = new BooleanSetting("Keep Rotation");
@@ -56,7 +56,8 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 				if(Kryos.rotationBus.rotate(rotations[0], rotations[1], this)) {
 					if(isAttackReady()) {
 						mc.gameMode.attack(mc.player, target);
-						mc.player.swing(InteractionHand.MAIN_HAND);
+						if(swingMode.getValue().equalsIgnoreCase("Client"))
+							mc.player.swing(InteractionHand.MAIN_HAND);
 					}
 				}
 			}
@@ -65,7 +66,7 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 	}
 	
 	public boolean isAttackReady() {
-	    return mc.player.getAttackStrengthScale(0) >= 1.0f;
+	    return mc.player.getAttackStrengthScale(0) >= 1F;
 	}
 	
 	public LivingEntity getBestTarget() {

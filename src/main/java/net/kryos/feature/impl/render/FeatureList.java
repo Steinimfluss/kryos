@@ -32,7 +32,7 @@ public class FeatureList extends Feature implements GuiExtractionListener {
 	    int yOffset = 0;
 
 	    List<Feature> sorted = Kryos.featureManager.getFeatures().stream()
-	            .sorted((a, b) -> Integer.compare(b.name.length(), a.name.length()))
+	            .sorted((a, b) -> Integer.compare(mc.font.width(b.name), mc.font.width(a.name)))
 	            .toList();
 
 	    for (Feature feature : sorted) {
