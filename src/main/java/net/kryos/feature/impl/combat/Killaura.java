@@ -19,6 +19,8 @@ import net.minecraft.world.entity.LivingEntity;
 public class Killaura extends Feature implements PlayerTickListener, Rotator {
 	private ModeSetting swingMode = new ModeSetting("Swing", "Client", "Client", "Server", "None");
 	private ModeSetting sortMode = new ModeSetting("Sort", "Distance", "Distance", "Health");
+
+	private BooleanSetting keepRotation = new BooleanSetting("Keep Rotation");
 	
 	private BooleanSetting animalSetting = new BooleanSetting("Animals");
 	private BooleanSetting mobSetting = new BooleanSetting("Mobs");
@@ -27,19 +29,17 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 	
 	public Killaura() {
 		super("Killaura", FeatureCategory.COMBAT);
-		setSettings(swingMode, sortMode, animalSetting, mobSetting, playerSetting);
+		setSettings(swingMode, sortMode, animalSetting, mobSetting, playerSetting, keepRotation);
 	}
 
 	@Override
 	protected void onEnable() {
 		Kryos.eventBus.subscribe(this);
-		Kryos.rotationBus.subscribe(this);
 	}
 
 	@Override
 	protected void onDisable() {
 		Kryos.eventBus.unsubscribe(this);
-		Kryos.rotationBus.unsubscribe(this);
 	}
 
 	@Override
@@ -49,15 +49,19 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 		LivingEntity target = getBestTarget();
 		
 		if(target != null && EntityUtil.isInRange(target, mc.player.entityInteractionRange())) {
-			float[] rotations = RotationUtil.getRotationsTo(target);
+			if(isAttackReady() || keepRotation.enabled) {
+				Kryos.rotationBus.subscribe(this);
+				float[] rotations = RotationUtil.getRotationsTo(target);
 			
-			if(Kryos.rotationBus.rotate(rotations[0], rotations[1], this)) {
-				if(isAttackReady()) {
-					mc.gameMode.attack(mc.player, target);
-					mc.player.swing(InteractionHand.MAIN_HAND);
+				if(Kryos.rotationBus.rotate(rotations[0], rotations[1], this)) {
+					if(isAttackReady()) {
+						mc.gameMode.attack(mc.player, target);
+						mc.player.swing(InteractionHand.MAIN_HAND);
+					}
 				}
 			}
 		}
+		Kryos.rotationBus.unsubscribe(this);
 	}
 	
 	public boolean isAttackReady() {
