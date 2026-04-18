@@ -12,8 +12,10 @@ import net.kryos.feature.impl.render.FeatureList;
 import net.kryos.feature.impl.render.Fog;
 import net.kryos.feature.impl.render.NoRender;
 import net.kryos.feature.impl.render.ViewModel;
+import net.minecraft.client.Minecraft;
 
 public class FeatureManager implements KeyPressListener {
+	private static final Minecraft mc = Minecraft.getInstance();
     private final List<Feature> features = new ArrayList<>();
     
     public ClickGui clickGui = new ClickGui();
@@ -63,6 +65,8 @@ public class FeatureManager implements KeyPressListener {
 
 	@Override
 	public void onKeyPress(KeyPressEvent event) {
+		if(mc.screen != null) return;
+		
 		if(event.getAction() == 1) {
 			features.forEach(feature -> {
 				if(feature.getKey() == event.getEvent().input()) {

@@ -5,7 +5,7 @@ import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.ModeSetting;
 
 public class RotationFeature extends Feature {
-	public ModeSetting movementCorrection = new ModeSetting("Movement", "None", "None", "Strict");
+	public ModeSetting movementCorrection = new ModeSetting("Movement", "None", "None", "Silent", "Strict");
 	public ModeSetting rotationCorrection = new ModeSetting("Rotation", "None", "None", "Strict");
 	
 	public RotationFeature() {
@@ -15,7 +15,7 @@ public class RotationFeature extends Feature {
 
 	@Override
 	protected void onEnable() {
-		
+		setEnabled(false);
 	}
 
 	@Override

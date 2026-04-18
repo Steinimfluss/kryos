@@ -18,7 +18,7 @@ public class RotationBus implements SendRotationListener, RotateAvatarListener, 
 	private static final Minecraft mc = Minecraft.getInstance();
 	private final List<Rotator> rotators = new ArrayList<>();
 	public boolean rotating;
-	private boolean lastRotating;
+	public boolean lastRotating;
 	public float yaw;
 	public float pitch;
 	

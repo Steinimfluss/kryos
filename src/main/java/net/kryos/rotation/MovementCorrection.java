@@ -1,7 +1,7 @@
 package net.kryos.rotation;
 
 public enum MovementCorrection {
-	NONE, STRICT;
+	NONE, SILENT, STRICT;
 	
 	public static MovementCorrection getFromString(String value) {
 		for(MovementCorrection correction : values()) {

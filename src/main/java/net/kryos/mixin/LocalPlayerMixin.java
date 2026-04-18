@@ -24,20 +24,20 @@ public class LocalPlayerMixin {
 	
     @Inject(method = "sendPosition", at = @At("HEAD"))
 	private void sendPosition$HEAD(CallbackInfo ci) {
-    	packet$lastYaw = mc.player.getXRot();
-    	packet$lastPitch = mc.player.getYRot();
+    	packet$lastYaw = mc.player.getYRot();
+    	packet$lastPitch = mc.player.getXRot();
     	
     	SendRotationEvent event = new SendRotationEvent(packet$lastYaw, packet$lastPitch);
     	Kryos.eventBus.post(event);
     	
-    	mc.player.setXRot(event.getYaw());
-    	mc.player.setYRot(event.getPitch());
+    	mc.player.setYRot(event.getYaw());
+    	mc.player.setXRot(event.getPitch());
     }
     
     @Inject(method = "sendPosition", at = @At("TAIL"))
 	private void sendPosition$TAIL(CallbackInfo ci) {
-    	mc.player.setXRot(packet$lastYaw);
-    	mc.player.setYRot(packet$lastPitch);
+    	mc.player.setYRot(packet$lastYaw);
+    	mc.player.setXRot(packet$lastPitch);
     }
 
     @Inject(method = "tick", at = @At("HEAD"))
@@ -67,7 +67,7 @@ public class LocalPlayerMixin {
             float partialTicks,
             CallbackInfoReturnable<HitResult> cir
     ) {
-    	if(Kryos.rotationBus.midRotation() && getRotationCorrection() == RotationCorrection.STRICT) {
+    	if(Kryos.rotationBus.lastRotating && getRotationCorrection() == RotationCorrection.STRICT) {
 	        cameraEntity.setYRot(cameraEntity.getYRot());
 	        cameraEntity.setXRot(cameraEntity.getXRot());
 	
@@ -80,18 +80,18 @@ public class LocalPlayerMixin {
     	}
     }
 
-    @Inject(method = "pick", at = @At("TAIL"))
-    private static void pick$TAIL(
+    @Inject(method = "pick", at = @At("RETURN"))
+    private static void pick$RETURN(
             Entity cameraEntity,
             double blockInteractionRange,
             double entityInteractionRange,
             float partialTicks,
             CallbackInfoReturnable<HitResult> cir
     ) {
-    	if(Kryos.rotationBus.midRotation() && getRotationCorrection() == RotationCorrection.STRICT) {
-	        LocalPlayerMixin mixin = (LocalPlayerMixin)(Object) cameraEntity;
-	        cameraEntity.setYRot(mixin.pick$lastYaw);
-	        cameraEntity.setXRot(mixin.pick$oldYaw);
-    	}
+        if (Kryos.rotationBus.lastRotating && getRotationCorrection() == RotationCorrection.STRICT) {
+            LocalPlayerMixin mixin = (LocalPlayerMixin)(Object) cameraEntity;
+            cameraEntity.setYRot(mixin.pick$lastYaw);
+            cameraEntity.setXRot(mixin.pick$oldYaw);
+        }
     }
 }

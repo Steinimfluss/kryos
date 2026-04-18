@@ -28,7 +28,7 @@ public abstract class LivingEntityMixin {
     @Inject(method = "travel", at = @At("HEAD"))
     private void kryos$HEAD(Vec3 input, CallbackInfo ci) {
         Minecraft mc = getClient();
-        if (mc != null && mc.player != null && (Object) this == mc.player && getMovementCorrection() == MovementCorrection.STRICT && Kryos.rotationBus.rotating) {
+        if (mc != null && mc.player != null && (Object) this == mc.player && (getMovementCorrection() == MovementCorrection.STRICT || getMovementCorrection() == MovementCorrection.SILENT) && Kryos.rotationBus.rotating) {
         	oldYRot$TRAVEL = mc.player.getYRot();
             mc.player.setYRot(Kryos.rotationBus.yaw);
         }
@@ -37,7 +37,7 @@ public abstract class LivingEntityMixin {
     @Inject(method = "travel", at = @At("TAIL"))
     private void kryos$TAIL(Vec3 input, CallbackInfo ci) {
         Minecraft mc = getClient();
-        if (mc != null && mc.player != null && (Object) this == mc.player && getMovementCorrection() == MovementCorrection.STRICT && Kryos.rotationBus.rotating) {
+        if (mc != null && mc.player != null && (Object) this == mc.player && (getMovementCorrection() == MovementCorrection.STRICT || getMovementCorrection() == MovementCorrection.SILENT) && Kryos.rotationBus.rotating) {
             mc.player.setYRot(oldYRot$TRAVEL);
         }
     }
@@ -45,7 +45,7 @@ public abstract class LivingEntityMixin {
     @Inject(method = "jumpFromGround", at = @At("HEAD"))
 	public void jumpFromGround$HEAD(CallbackInfo ci) {
 		Minecraft mc = getClient();
-    	if(mc != null && mc.player != null && (Object) this == mc.player && getMovementCorrection() == MovementCorrection.STRICT && Kryos.rotationBus.rotating) {
+    	if(mc != null && mc.player != null && (Object) this == mc.player && (getMovementCorrection() == MovementCorrection.STRICT || getMovementCorrection() == MovementCorrection.SILENT) && Kryos.rotationBus.rotating) {
 			oldYRot$JUMP = mc.player.getYRot();
 	        mc.player.setYRot(Kryos.rotationBus.yaw);
     	}
@@ -54,7 +54,7 @@ public abstract class LivingEntityMixin {
     @Inject(method = "jumpFromGround", at = @At("TAIL"))
 	public void jumpFromGround$TAIL(CallbackInfo ci) {
 		Minecraft mc = getClient();
-    	if(mc != null && mc.player != null && (Object) this == mc.player && getMovementCorrection() == MovementCorrection.STRICT && Kryos.rotationBus.rotating) {
+    	if(mc != null && mc.player != null && (Object) this == mc.player && (getMovementCorrection() == MovementCorrection.STRICT || getMovementCorrection() == MovementCorrection.SILENT) && Kryos.rotationBus.rotating) {
     		mc.player.setYRot(oldYRot$JUMP);
     	}
 	}

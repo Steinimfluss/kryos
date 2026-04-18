@@ -10,7 +10,9 @@
 		"AbstractClientPlayerMixin",
 		"LocalPlayerMixin",
 		"AvatarRendererMixin",
-		"LivingEntityMixin"
+		"LivingEntityMixin",
+		"ClientInputAccessor",
+		"KeyboardInputMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

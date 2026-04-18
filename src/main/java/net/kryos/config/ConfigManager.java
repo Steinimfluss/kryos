@@ -20,8 +20,14 @@ import net.kryos.feature.setting.Setting;
 
 public class ConfigManager {
 	public void save(Path path) throws IOException {
-	    if (!java.nio.file.Files.exists(path))
+	    Path parent = path.getParent();
+	    if (parent != null) {
+	        java.nio.file.Files.createDirectories(parent);
+	    }
+
+	    if (!java.nio.file.Files.exists(path)) {
 	        java.nio.file.Files.createFile(path);
+	    }
 
 	    Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	    JsonObject root = new JsonObject();
