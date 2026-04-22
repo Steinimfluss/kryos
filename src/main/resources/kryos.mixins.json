@@ -14,7 +14,10 @@
 		"ClientInputAccessor",
 		"KeyboardInputMixin",
 		"ClientPacketListenerMixin",
-		"ClientboundSetEntityMotionPacketAccessor"
+		"ClientboundSetEntityMotionPacketAccessor",
+		"MultiPlayerGameModeMixin",
+		"ClientLevelAccessor",
+		"LevelRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

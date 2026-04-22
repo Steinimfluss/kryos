@@ -68,7 +68,7 @@ public class RotationBus implements SendRotationListener, RotateAvatarListener, 
 
 	@Override
 	public void rotateAvatar(RotateAvatarEvent event) {
-		if(midRotation()) {
+		if(midRotation() && event.getState().id == mc.player.getId()) {
 			mc.player.setYBodyRot(yaw);
 			mc.player.setYHeadRot(yaw);
 			event.getState().xRot = pitch;

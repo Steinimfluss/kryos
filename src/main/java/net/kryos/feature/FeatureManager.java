@@ -5,15 +5,21 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
-import net.kryos.feature.impl.combat.Offhand;
-import net.kryos.feature.impl.combat.Velocity;
+import net.kryos.feature.impl.combat.AutoCity;
+import net.kryos.feature.impl.combat.CrystalAura;
 import net.kryos.feature.impl.combat.Killaura;
+import net.kryos.feature.impl.combat.Offhand;
+import net.kryos.feature.impl.combat.Surround;
+import net.kryos.feature.impl.combat.Velocity;
+import net.kryos.feature.impl.misc.FakePlayer;
 import net.kryos.feature.impl.misc.RotationFeature;
 import net.kryos.feature.impl.render.ClickGui;
 import net.kryos.feature.impl.render.FeatureList;
 import net.kryos.feature.impl.render.Fog;
+import net.kryos.feature.impl.render.FullBright;
 import net.kryos.feature.impl.render.NoRender;
 import net.kryos.feature.impl.render.ViewModel;
+import net.kryos.feature.impl.world.PacketMine;
 import net.minecraft.client.Minecraft;
 
 public class FeatureManager implements KeyPressListener {
@@ -29,6 +35,12 @@ public class FeatureManager implements KeyPressListener {
     public RotationFeature rotationFeature = new RotationFeature();
     public Offhand offhand = new Offhand();
     public Velocity velocity = new Velocity();
+    public Surround surround = new Surround();
+    public FullBright fullbright = new FullBright();
+    public CrystalAura crystalAura = new CrystalAura();
+    public FakePlayer fakePlayer = new FakePlayer();
+    public PacketMine packetMine = new PacketMine();
+    public AutoCity autoCity = new AutoCity();
     
     public FeatureManager() {
         loadFeatures();
@@ -44,6 +56,12 @@ public class FeatureManager implements KeyPressListener {
     	features.add(rotationFeature);
     	features.add(offhand);
     	features.add(velocity);
+    	features.add(surround);
+    	features.add(fullbright);
+    	features.add(crystalAura);
+    	features.add(fakePlayer);
+    	features.add(packetMine);
+    	features.add(autoCity);
     }
 
     public List<Feature> getFeatures() {

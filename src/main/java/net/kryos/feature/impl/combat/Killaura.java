@@ -40,11 +40,13 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 	@Override
 	protected void onDisable() {
 		Kryos.eventBus.unsubscribe(this);
+		Kryos.rotationBus.unsubscribe(this);
 	}
 
 	@Override
 	public void onPre(Pre event) {
 		if(mc.player == null || mc.screen != null) return;
+		if(mc.player.isUsingItem()) return;
 		
 		LivingEntity target = getBestTarget();
 		
@@ -117,8 +119,6 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 	    return best;
 	}
 
-
-
 	@Override
 	public void onPost(Post event) {
 		
@@ -126,6 +126,6 @@ public class Killaura extends Feature implements PlayerTickListener, Rotator {
 
 	@Override
 	public RotationPrivilege getRotationPrivilege() {
-		return RotationPrivilege.MEDIUM;
+		return RotationPrivilege.LOWEST;
 	}
 }
