@@ -5,18 +5,19 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
-import net.kryos.feature.impl.combat.AutoCity;
 import net.kryos.feature.impl.combat.CrystalAura;
-import net.kryos.feature.impl.combat.Killaura;
 import net.kryos.feature.impl.combat.Offhand;
 import net.kryos.feature.impl.combat.Surround;
 import net.kryos.feature.impl.combat.Velocity;
 import net.kryos.feature.impl.misc.FakePlayer;
 import net.kryos.feature.impl.misc.RotationFeature;
+import net.kryos.feature.impl.movement.Speed;
 import net.kryos.feature.impl.render.ClickGui;
+import net.kryos.feature.impl.render.ESP;
 import net.kryos.feature.impl.render.FeatureList;
 import net.kryos.feature.impl.render.Fog;
 import net.kryos.feature.impl.render.FullBright;
+import net.kryos.feature.impl.render.HoleESP;
 import net.kryos.feature.impl.render.NoRender;
 import net.kryos.feature.impl.render.ViewModel;
 import net.kryos.feature.impl.world.PacketMine;
@@ -31,7 +32,6 @@ public class FeatureManager implements KeyPressListener {
     public Fog fog = new Fog();
     public ViewModel viewModel = new ViewModel();
     public NoRender noRender = new NoRender();
-    public Killaura killaura = new Killaura();
     public RotationFeature rotationFeature = new RotationFeature();
     public Offhand offhand = new Offhand();
     public Velocity velocity = new Velocity();
@@ -40,7 +40,9 @@ public class FeatureManager implements KeyPressListener {
     public CrystalAura crystalAura = new CrystalAura();
     public FakePlayer fakePlayer = new FakePlayer();
     public PacketMine packetMine = new PacketMine();
-    public AutoCity autoCity = new AutoCity();
+    public ESP esp = new ESP();
+    public HoleESP holeEsp = new HoleESP();
+    public Speed speed = new Speed();
     
     public FeatureManager() {
         loadFeatures();
@@ -52,7 +54,6 @@ public class FeatureManager implements KeyPressListener {
     	features.add(fog);
     	features.add(viewModel);
     	features.add(noRender);
-    	features.add(killaura);
     	features.add(rotationFeature);
     	features.add(offhand);
     	features.add(velocity);
@@ -61,7 +62,9 @@ public class FeatureManager implements KeyPressListener {
     	features.add(crystalAura);
     	features.add(fakePlayer);
     	features.add(packetMine);
-    	features.add(autoCity);
+    	features.add(esp);
+    	features.add(holeEsp);
+    	features.add(speed);
     }
 
     public List<Feature> getFeatures() {
@@ -93,7 +96,7 @@ public class FeatureManager implements KeyPressListener {
 		
 		if(event.getAction() == 1) {
 			features.forEach(feature -> {
-				if(feature.getKey() == event.getEvent().input()) {
+				if(feature.getKey() != null && feature.getKey().getInput() == event.getEvent().input()) {
 					feature.toggle();
 				}
 			});

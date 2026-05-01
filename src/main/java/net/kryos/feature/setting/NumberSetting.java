@@ -2,46 +2,115 @@ package net.kryos.feature.setting;
 
 public class NumberSetting<T extends Number & Comparable<T>> extends Setting {
     private T value;
-    public final T min;
-    public final T max;
-    public final T step;
-
-    public NumberSetting(String name, T value, T min, T max, T step) {
-        super(name);
-        this.value = value;
-        this.min = min;
-        this.max = max;
-        this.step = step;
-    }
-
-    public void setValue(T newValue) {
-        setValueFromDouble(newValue.doubleValue());
-    }
-
-    public void setValueFromDouble(double d) {
-        double minD = min.doubleValue();
-        double maxD = max.doubleValue();
-        double stepD = step.doubleValue();
-
-        double snapped = Math.round((d - minD) / stepD) * stepD + minD;
-
-        snapped = Math.max(minD, Math.min(maxD, snapped));
-
-        this.value = cast(Math.round(snapped * 100.0) / 100.0);
-    }
-
-
-    @SuppressWarnings("unchecked")
-    private T cast(double d) {
-        if (value instanceof Integer) return (T) Integer.valueOf((int) d);
-        if (value instanceof Long)    return (T) Long.valueOf((long) d);
-        if (value instanceof Float)   return (T) Float.valueOf((float) d);
-        if (value instanceof Double)  return (T) Double.valueOf(d);
-
-        throw new IllegalArgumentException("Number type not implemented: " + value.getClass().getSimpleName());
-    }
+    private T min;
+    private T max;
+    private T step;
+    private Class<T> type;
 
     public T getValue() {
         return value;
+    }
+
+    public T getMin() {
+        return min;
+    }
+
+    public T getMax() {
+        return max;
+    }
+
+    public T getStep() {
+        return step;
+    }
+
+    public void setMin(T min) {
+        this.min = min;
+        inferType(min);
+    }
+
+    public void setMax(T max) {
+        this.max = max;
+        inferType(max);
+    }
+
+    public void setStep(T step) {
+        this.step = step;
+        inferType(step);
+    }
+
+    public void setValue(T value) {
+        inferType(value);
+        this.value = clamp(value);
+    }
+
+    public void setValueFromDouble(double d) {
+        if (type == null)
+            throw new IllegalStateException("NumberSetting type not inferred yet");
+
+        T converted = convert(d);
+        this.value = clamp(converted);
+    }
+
+    @SuppressWarnings("unchecked")
+    private T convert(double d) {
+        if (type == Integer.class) return (T) Integer.valueOf((int) d);
+        if (type == Double.class)  return (T) Double.valueOf(d);
+        if (type == Float.class)   return (T) Float.valueOf((float) d);
+        if (type == Long.class)    return (T) Long.valueOf((long) d);
+        if (type == Short.class)   return (T) Short.valueOf((short) d);
+        if (type == Byte.class)    return (T) Byte.valueOf((byte) d);
+
+        throw new IllegalStateException("Unsupported number type: " + type);
+    }
+
+    @SuppressWarnings("unchecked")
+	private void inferType(T sample) {
+        if (sample != null && type == null) {
+            this.type = (Class<T>) sample.getClass();
+        }
+    }
+    
+    @Override
+    public String toString() {
+        if (value == null) return "null";
+
+        if (type == Long.class) {
+            long ms = (Long) value;
+
+            long totalSeconds = ms / 1000;
+            long minutes = totalSeconds / 60;
+            long hours   = minutes / 60;
+
+            long seconds = totalSeconds % 60;
+            minutes %= 60;
+
+            long millis = ms % 1000;
+
+            if (hours > 0)
+                return String.format("%d:%02d:%02d.%03d", hours, minutes, seconds, millis);
+            else
+                return String.format("%d:%02d.%03d", minutes, seconds, millis);
+        }
+
+        if (type == Float.class || type == Double.class) {
+            return String.format("%.2f", value.doubleValue());
+        }
+
+        return value.toString();
+    }
+
+    private T clamp(T v) {
+        if (min != null && v.compareTo(min) < 0) v = min;
+        if (max != null && v.compareTo(max) > 0) v = max;
+
+        if (step == null) return v;
+
+        double base = min != null ? min.doubleValue() : 0.0;
+        double raw  = v.doubleValue();
+        double st   = step.doubleValue();
+
+        double snapped = base + Math.round((raw - base) / st) * st;
+
+        return convert(snapped);
     }
 }

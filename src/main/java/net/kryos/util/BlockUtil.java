@@ -2,6 +2,7 @@ package net.kryos.util;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.effect.MobEffects;
@@ -11,6 +12,7 @@ import net.minecraft.world.item.component.Tool;
 import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 
 public class BlockUtil {
 	private static final Minecraft mc = Minecraft.getInstance();
@@ -63,5 +65,36 @@ public class BlockUtil {
 
         return speed;
     }
+	
+	public static Vec3 getClosestPointOnFace(BlockPos pos, Direction face) {
+	    if (mc.player == null) return Vec3.ZERO;
 
+	    Vec3 player = mc.player.getEyePosition();
+
+	    double minX = pos.getX();
+	    double minY = pos.getY();
+	    double minZ = pos.getZ();
+	    double maxX = minX + 1;
+	    double maxY = minY + 1;
+	    double maxZ = minZ + 1;
+
+	    double x = clamp(player.x, minX, maxX);
+	    double y = clamp(player.y, minY, maxY);
+	    double z = clamp(player.z, minZ, maxZ);
+
+	    switch (face) {
+	        case DOWN -> y = minY;
+	        case UP   -> y = maxY;
+	        case NORTH -> z = minZ;
+	        case SOUTH -> z = maxZ;
+	        case WEST  -> x = minX;
+	        case EAST  -> x = maxX;
+	    }
+
+	    return new Vec3(x, y, z);
+	}
+
+	private static double clamp(double v, double min, double max) {
+	    return Math.max(min, Math.min(max, v));
+	}
 }

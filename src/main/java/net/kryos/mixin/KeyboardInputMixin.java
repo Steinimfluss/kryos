@@ -37,7 +37,7 @@ public abstract class KeyboardInputMixin {
         boolean right = this.options.keyRight.isDown();
 
         if (Kryos.rotationBus.lastRotating &&
-            MovementCorrection.getFromString(Kryos.featureManager.rotationFeature.movementCorrection.getValue()) == MovementCorrection.SILENT &&
+            MovementCorrection.getFromString(Kryos.featureManager.rotationFeature.movementCorrection.getValue().getName()) == MovementCorrection.SILENT &&
             player != null) {
 
             float clientYaw = player.getYRot();

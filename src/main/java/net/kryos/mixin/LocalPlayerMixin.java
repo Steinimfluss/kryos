@@ -56,7 +56,7 @@ public class LocalPlayerMixin {
     private float pick$oldYaw;
 
     private static RotationCorrection getRotationCorrection() {
-    	return RotationCorrection.getFromString(Kryos.featureManager.rotationFeature.rotationCorrection.getValue());
+    	return RotationCorrection.getFromString(Kryos.featureManager.rotationFeature.rotationCorrection.getValue().getName());
     }
     
     @Inject(method = "pick", at = @At("HEAD"))

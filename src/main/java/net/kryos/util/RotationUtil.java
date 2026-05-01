@@ -1,6 +1,8 @@
 package net.kryos.util;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
 
@@ -15,6 +17,18 @@ public class RotationUtil {
 
     public static float[] getRotationsTo(Vec3 target) {
         Vec3 eyes = mc.player.getEyePosition();
+        return getRotationsTo(eyes, target);
+    }
+    
+    public static float[] getRotationsTo(BlockPos pos, Direction dir) {
+        Vec3 eyes = mc.player.getEyePosition();
+
+        Vec3 target = pos.getCenter().add(
+            dir.getStepX() * 0.5,
+            dir.getStepY() * 0.5,
+            dir.getStepZ() * 0.5
+        );
+
         return getRotationsTo(eyes, target);
     }
 

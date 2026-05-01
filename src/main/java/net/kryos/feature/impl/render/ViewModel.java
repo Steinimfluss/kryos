@@ -8,20 +8,76 @@ import net.kryos.event.listener.impl.RenderArmWithItemListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.NumberSetting;
+import net.kryos.feature.setting.NumberSettingBuilder;
+import net.kryos.feature.setting.SplitterSetting;
+import net.kryos.feature.setting.SplitterSettingBuilder;
 
 public class ViewModel extends Feature implements RenderArmWithItemListener {
-	private NumberSetting<Float> xOffset = new NumberSetting<Float>("X Offset", 0F, -5F, 5F, 0.01F);
-	private NumberSetting<Float> yOffset = new NumberSetting<Float>("Y Offset", 0F, -5F, 5F, 0.01F);
-	private NumberSetting<Float> zOffset = new NumberSetting<Float>("Z Offset", 0F, -5F, 5F, 0.01F);
+	private NumberSetting<Float> xOffset = new NumberSettingBuilder<Float>()
+			.name("X")
+			.value(0F)
+			.min(-5F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private NumberSetting<Float> yOffset = new NumberSettingBuilder<Float>()
+			.name("Y")
+			.value(0F)
+			.min(-5F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private NumberSetting<Float> zOffset = new NumberSettingBuilder<Float>()
+			.name("Z")
+			.value(0F)
+			.min(-5F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private SplitterSetting offsetSplitter = new SplitterSettingBuilder()
+			.name("Offset")
+			.setting(xOffset)
+			.setting(yOffset)
+			.setting(zOffset)
+			.build();
 
-	private NumberSetting<Float> xScale = new NumberSetting<Float>("X Scale", 1F, 0F, 5F, 0.01F);
-	private NumberSetting<Float> yScale = new NumberSetting<Float>("Y Scale", 1F, 0F, 5F, 0.01F);
-	private NumberSetting<Float> zScale = new NumberSetting<Float>("Z Scale", 1F, 0F, 5F, 0.01F);
+	private NumberSetting<Float> xScale = new NumberSettingBuilder<Float>()
+			.name("X")
+			.value(1F)
+			.min(0.1F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private NumberSetting<Float> yScale = new NumberSettingBuilder<Float>()
+			.name("Y")
+			.value(1F)
+			.min(0.1F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private NumberSetting<Float> zScale = new NumberSettingBuilder<Float>()
+			.name("Z")
+			.value(1F)
+			.min(0.1F)
+			.max(5F)
+			.step(0.01F)
+			.build();
+	
+	private SplitterSetting scaleSplitter = new SplitterSettingBuilder()
+			.name("Scale")
+			.setting(xScale)
+			.setting(yScale)
+			.setting(zScale)
+			.build();
 	
 	public ViewModel() {
 		super("ViewModel", FeatureCategory.RENDER);
-		setSettings(xOffset, yOffset, zOffset,
-				xScale, yScale, zScale);
+		setSettings(offsetSplitter, scaleSplitter);
 	}
 
 	@Override

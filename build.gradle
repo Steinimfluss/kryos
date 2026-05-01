@@ -12,7 +12,7 @@ base {
 
 repositories {
     mavenCentral()
-    maven { url "https://maven.friwi.me/releases" }
+    maven { url "https://jitpack.io" }
 }
 
 dependencies {

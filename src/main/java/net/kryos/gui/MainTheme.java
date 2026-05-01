@@ -3,8 +3,12 @@ package net.kryos.gui;
 import java.awt.Color;
 
 public class MainTheme {
-	public static final int SELECTED = new Color(170, 72, 187, 100).getRGB();
-	public static final int PRIMARY = new Color(50, 50, 50, 70).getRGB();
-	public static final int SECONDARY = new Color(40, 40, 40, 70).getRGB();
-	public static final int TERTIARY = new Color(30, 30, 30, 70).getRGB();
+	public static final Color SELECTED = new Color(148, 194, 241, 255);
+	public static final Color PRIMARY = new Color(10, 11, 20, 100);
+	public static final Color SECONDARY = new Color(16, 21, 31, 100);
+	public static final Color TERTIARY = new Color(8, 12, 21, 100);
+	public static final Color LINE = new Color(33, 34, 45, 255);
+
+	public static final Color TEXT = new Color(235, 242, 254, 255);
+	public static final Color TEXT_DARK = new Color(79, 90, 106, 255);
 }

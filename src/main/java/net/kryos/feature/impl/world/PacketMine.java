@@ -3,21 +3,27 @@ package net.kryos.feature.impl.world;
 import java.awt.Color;
 
 import com.mojang.blaze3d.vertex.PoseStack;
-import com.mojang.math.Axis;
 
 import net.kryos.Kryos;
 import net.kryos.event.impl.PlayerTickEvent.Post;
 import net.kryos.event.impl.PlayerTickEvent.Pre;
 import net.kryos.event.impl.RenderLevelEvent;
 import net.kryos.event.impl.StartDestroyEvent;
+import net.kryos.event.impl.SwapSlotEvent;
 import net.kryos.event.listener.impl.PlayerTickListener;
 import net.kryos.event.listener.impl.RenderLevelListener;
 import net.kryos.event.listener.impl.StartDestroyListener;
+import net.kryos.event.listener.impl.SwapSlotListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.BooleanSetting;
+import net.kryos.feature.setting.BooleanSettingBuilder;
+import net.kryos.feature.setting.ModeSetting;
+import net.kryos.feature.setting.ModeSettingBuilder;
 import net.kryos.feature.setting.NumberSetting;
+import net.kryos.feature.setting.NumberSettingBuilder;
 import net.kryos.mixin.ClientLevelAccessor;
+import net.kryos.mixin.MultiPlayerGameModeAccessor;
 import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
 import net.kryos.util.BlockUtil;
@@ -25,35 +31,95 @@ import net.kryos.util.InventoryUtil;
 import net.kryos.util.LevelRenderUtil;
 import net.kryos.util.RotationUtil;
 import net.minecraft.client.Camera;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
-public class PacketMine extends Feature implements Rotator, StartDestroyListener, PlayerTickListener, RenderLevelListener {
-    private final NumberSetting<Float> maxDistance = new NumberSetting<>("Max Distance", 4.0F, 0F, 10F, 0.1F);
-    private final NumberSetting<Integer> timeout = new NumberSetting<>("Timeout", 40, 0, 1000, 1);
-    private final BooleanSetting rotate = new BooleanSetting("Rotate");
-
+public class PacketMine extends Feature implements Rotator, StartDestroyListener, PlayerTickListener, RenderLevelListener, SwapSlotListener {
+    private final NumberSetting<Float> maxDistance = new NumberSettingBuilder<Float>()
+    		.name("Max Distance")
+    		.value(4F)
+    		.min(0F)
+    		.max(10F)
+    		.step(0.1F)
+    		.build();
+    
+    private final NumberSetting<Float> rotateStart = new NumberSettingBuilder<Float>()
+    		.name("Start Rotate")
+    		.value(1F)
+    		.min(0F)
+    		.max(2F)
+    		.step(0.05F)
+    		.build();
+    
+    private final BooleanSetting rotate = new BooleanSettingBuilder()
+    		.name("Rotate")
+    		.value(false)
+    		.setting(rotateStart)
+    		.build();
+    
+    private final NumberSetting<Float> destroyStop = new NumberSettingBuilder<Float>()
+    		.name("Destroy Stop")
+    		.value(1F)
+    		.min(1F)
+    		.max(2F)
+    		.step(0.05F)
+    		.build();
+    
+    private final BooleanSetting swing = new BooleanSettingBuilder()
+    		.name("Swing")
+    		.value(true)
+    		.build();
+    
+    private final BooleanSetting swap = new BooleanSettingBuilder()
+    		.name("Swap Back")
+    		.value(true)
+    		.build();
+    
+    private final ModeSetting swapMode = new ModeSettingBuilder()
+    		.name("Swap Type")
+    		.mode("Inventory")
+    		.mode("Verbose")
+    		.mode("None")
+    		.value("Inventory")
+    		.build();
+    
+    private final ModeSetting hotbarMode = new ModeSettingBuilder()
+    		.name("Hotbar Mode")
+    		.mode("Abort")
+    		.mode("Prevent")
+    		.mode("Ignore")
+    		.value("Abort")
+    		.build();
+    
+    private int desiredSlot;
+    
     private int startTick;
     public BlockPos breakPos;
     public BlockState breakState;
+    public Direction breakDir;
     public boolean mining;
+    
+    private boolean swapBack;
+    private int swapSlot;
 
     public PacketMine() {
         super("PacketMine", FeatureCategory.WORLD);
-        setSettings(maxDistance, timeout, rotate);
+        
+        addSettings(maxDistance, destroyStop, rotate, swing, swap, swapMode, hotbarMode);
     }
 
     @Override
     protected void onEnable() {
-        breakPos = null;
         mining = false;
         
         Kryos.eventBus.subscribe(this);
@@ -64,34 +130,41 @@ public class PacketMine extends Feature implements Rotator, StartDestroyListener
     protected void onDisable() {
         Kryos.eventBus.unsubscribe(this);
         Kryos.rotationBus.unsubscribe(this);
-
-        breakPos = null;
-        mining = false;
     }
 
-    public void destroy(StartDestroyEvent event, boolean swing) {
+    public void destroy(StartDestroyEvent event) {
     	if (mc.player.gameMode() != GameType.SURVIVAL) return;
 
         BlockStatePredictionHandler handler =
             ((ClientLevelAccessor) mc.level).kryos$getBlockStatePredictionHandler();
 
         if (mining) {
-        	event.cancel();
-        	return;
+        	if(event.getPos().equals(breakPos)) {
+        		event.cancel();
+        		return;
+        	}
+        	
+        	abort();
         }
-        
-        Kryos.rotationBus.subscribe(this);
-        float[] rot = RotationUtil.getRotationsTo(event.getPos().getCenter());
-        if(!Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
-        	event.cancel();
-        	return;
-        }
-        
-        breakPos = event.getPos();
-        breakState = mc.level.getBlockState(breakPos);
+
         mining = true;
         startTick = mc.player.tickCount;
+        breakPos = event.getPos();
+        breakState = mc.level.getBlockState(breakPos);
+        breakDir = event.getDirection();
+        
+        ItemStack bestTool = InventoryUtil.findFastestTool(breakState, breakPos);
+        int bestSlot = InventoryUtil.getSlotFromStack(bestTool);
+        int oldSlot = mc.player.getInventory().getSelectedSlot();
 
+        if(swapMode.getValue().getName().equalsIgnoreCase("Verbose") || swapMode.getValue().getName().equalsIgnoreCase("Inventory")) {
+	        desiredSlot = bestSlot;
+	        mc.player.getInventory().setSelectedSlot(bestSlot);
+	        mc.getConnection().send(new ServerboundSetCarriedItemPacket(bestSlot));
+        }
+        
+    	swapSlot = mc.player.getInventory().getSelectedSlot();
+    	
         try (var prediction = handler.startPredicting()) {
             int sequence = prediction.currentSequence();
 
@@ -103,43 +176,113 @@ public class PacketMine extends Feature implements Rotator, StartDestroyListener
             ));
         }
         
-        try (var prediction = handler.startPredicting()) {
-            int sequence = prediction.currentSequence();
-	        mc.getConnection().send(new ServerboundPlayerActionPacket(
-	            ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
-                event.getPos(),
-                event.getDirection(),
-	            sequence
-	        ));
+        if(swapMode.getValue().getName().equalsIgnoreCase("Inventory")) {
+	        int oldContainerSlot = oldSlot;
+	        int newContainerSlot = 36 + bestSlot;
+	
+	        mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, newContainerSlot, oldContainerSlot, ContainerInput.SWAP, mc.player);
         }
         
-        if(swing) {
+        if(swing.enabled) {
         	mc.player.swing(InteractionHand.MAIN_HAND);
         }
         
         event.cancel();
     }
     
+    public void abort() {
+        mc.getConnection().send(new ServerboundPlayerActionPacket(
+            ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
+            breakPos,
+            breakDir
+        ));
+
+        MultiPlayerGameModeAccessor acc = (MultiPlayerGameModeAccessor) mc.gameMode;
+
+        acc.kryos$setIsDestroying(false);
+        acc.kryos$setDestroyProgress(0f);
+        mc.level.destroyBlockProgress(mc.player.getId(), breakPos, -1);
+        mc.player.resetAttackStrengthTicker();
+
+        mining = false;
+    }
+
     @Override
     public void startDestroy(StartDestroyEvent event) {
-        destroy(event, false);
+        destroy(event);
     }
 
     @Override
     public void onPre(Pre event) {
+		setSuffix(swapMode.getValue().getName());
         Kryos.rotationBus.unsubscribe(this);
-
+        
     	if(mining) {
-            double breakDelta = BlockUtil.getBreakDelta(mc.player.getActiveItem(), breakState, breakPos);
-            double rawProgress = breakDelta * ((mc.player.tickCount - startTick) + 1);
-            if(rawProgress > 1) {
-                Kryos.rotationBus.subscribe(this);
-                float[] rot = RotationUtil.getRotationsTo(breakPos.getCenter());
-                Kryos.rotationBus.rotate(rot[0], rot[1], this);
-            	mining = false;
+    		if(!breakPos.closerThan(mc.player.blockPosition(), maxDistance.getValue())) {
+    			abort();
+    			return;
+    		}
+    		
+            double breakDelta = BlockUtil.getBreakDelta(InventoryUtil.findFastestTool(breakState, breakPos), breakState, breakPos);
+            double progress = breakDelta * ((mc.player.tickCount - startTick) + 1);
+
+            if(progress >= rotateStart.getValue()) {
+	            Kryos.rotationBus.subscribe(this);
+	            float[] rot = RotationUtil.getRotationsTo(breakPos, breakDir);
+	            Kryos.rotationBus.rotate(rot[0], rot[1], this);
             }
+            
+            if(progress >= destroyStop.getValue()) {
+                ItemStack bestTool = InventoryUtil.findFastestTool(breakState, breakPos);
+                int bestSlot = InventoryUtil.getSlotFromStack(bestTool);
+
+                if(swap.enabled) {
+                	swapBack = true;
+                }
+                
+                if(swapMode.getValue().getName().equalsIgnoreCase("Verbose") || swapMode.getValue().getName().equalsIgnoreCase("Inventory")) {
+                    desiredSlot = bestSlot;
+                    mc.player.getInventory().setSelectedSlot(bestSlot);
+                    mc.getConnection().send(new ServerboundSetCarriedItemPacket(bestSlot));
+                }
+
+                BlockStatePredictionHandler handler =
+                        ((ClientLevelAccessor) mc.level).kryos$getBlockStatePredictionHandler();
+                
+            	try (var prediction = handler.startPredicting()) {
+                    int sequence = prediction.currentSequence();
+        	        mc.getConnection().send(new ServerboundPlayerActionPacket(
+        	            ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                        breakPos,
+                        breakDir,
+        	            sequence
+        	        ));
+                }
+            }
+            
+    		if(mc.level.getBlockState(breakPos) != breakState) {
+    			mining = false;
+    			
+    			if(swapBack) {
+    				swapBack = false;
+                    desiredSlot = swapSlot;
+    				mc.player.getInventory().setSelectedSlot(swapSlot);
+                    mc.getConnection().send(new ServerboundSetCarriedItemPacket(swapSlot));
+    			}
+    		}
     	}
     }
+
+	@Override
+	public void swapSlot(SwapSlotEvent event) {
+		if(mining && event.getDesired() != desiredSlot) {
+			if(hotbarMode.getValue().getName().equalsIgnoreCase("Abort")) {
+				abort();
+			} else if(hotbarMode.getValue().getName().equalsIgnoreCase("Prevent")) {
+				event.cancel();
+			}
+		}
+	}
 
     @Override
     public void onPost(Post event) {
@@ -153,14 +296,14 @@ public class PacketMine extends Feature implements Rotator, StartDestroyListener
 
     @Override
     public void renderLevel(RenderLevelEvent event) {
-        if (!mining) return;
+        if (!mining || breakPos == null || breakState == null || breakDir == null) return;
 
         BlockState breakState = mc.level.getBlockState(breakPos);
-        ItemStack bestStack = mc.player.getActiveItem();
-        int bestSlot = InventoryUtil.getSlotFromStack(bestStack);
+        ItemStack bestTool = InventoryUtil.findFastestTool(breakState, breakPos);
+        int bestSlot = InventoryUtil.getSlotFromStack(bestTool);
         if (bestSlot == -1) return;
 
-        double breakDelta = BlockUtil.getBreakDelta(bestStack, breakState, breakPos);
+        double breakDelta = BlockUtil.getBreakDelta(bestTool, breakState, breakPos);
         double rawProgress = breakDelta * ((mc.player.tickCount - startTick) + 1);
         double clamped = Mth.clamp(rawProgress, 0.0, 1.0);
 
@@ -189,30 +332,7 @@ public class PacketMine extends Feature implements Rotator, StartDestroyListener
         );
         
         poseStack.pushPose();
-
-	    poseStack.translate(cx, cy + 1, cz);
-	
-	    poseStack.mulPose(Axis.YP.rotationDegrees(-camera.yRot()));
-	    poseStack.mulPose(Axis.XP.rotationDegrees(camera.xRot()));
-	
-	    float scale = 0.025f;
-	    poseStack.scale(-scale, -scale, scale);
-	
-	    String text = String.format("%.0f%%", clamped * 100);
-	    mc.font.drawInBatch(
-	        text,
-	        -mc.font.width(text) / 2f,
-	        0,
-	        0xFFFFFFFF,
-	        false,
-	        poseStack.last().pose(),
-	        mc.renderBuffers().bufferSource(),
-	        Font.DisplayMode.NORMAL,
-	        0,
-	        15728880
-	    );
-	    poseStack.popPose();
-	
 		LevelRenderUtil.drawFilledBox(poseStack, box, color);
+		poseStack.popPose();
     }
 }

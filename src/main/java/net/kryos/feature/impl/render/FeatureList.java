@@ -7,7 +7,6 @@ import net.kryos.event.impl.GuiExtractionEvent;
 import net.kryos.event.listener.impl.GuiExtractionListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
-import net.kryos.gui.MainTheme;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 public class FeatureList extends Feature implements GuiExtractionListener {
@@ -32,7 +31,7 @@ public class FeatureList extends Feature implements GuiExtractionListener {
 	    int yOffset = 0;
 
 	    List<Feature> sorted = Kryos.featureManager.getFeatures().stream()
-	            .sorted((a, b) -> Integer.compare(mc.font.width(b.name), mc.font.width(a.name)))
+	            .sorted((a, b) -> Integer.compare(mc.font.width(b.name + (b.getSuffix() != null ? " [" + b.getSuffix() + "]" : "")), mc.font.width((a.name + (a.getSuffix() != null ? " [" + a.getSuffix() + "]" : "")))))
 	            .toList();
 
 	    for (Feature feature : sorted) {
@@ -41,12 +40,11 @@ public class FeatureList extends Feature implements GuiExtractionListener {
 	    	
 	        int height = mc.font.lineHeight + 4;
 
-	        graphics.fill(mc.getWindow().getGuiScaledWidth() - mc.font.width(feature.name) - 4, yOffset,  mc.getWindow().getGuiScaledWidth(), yOffset + height, MainTheme.PRIMARY);
-	        
+	        String text = feature.name + (feature.getSuffix() != null ? " [" + feature.getSuffix() + "]" : "");  
 	        graphics.text(
 	                mc.font,
-	                feature.name,
-	                mc.getWindow().getGuiScaledWidth() - mc.font.width(feature.name) - 2,
+	                text,
+	                mc.getWindow().getGuiScaledWidth() - mc.font.width(text) - 2,
 	                yOffset + 2,
 	                -1
 	        );

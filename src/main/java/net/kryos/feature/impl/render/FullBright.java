@@ -21,7 +21,8 @@ public class FullBright extends Feature implements PlayerTickListener {
     @Override
     protected void onDisable() {
         Kryos.eventBus.unsubscribe(this);
-        mc.player.removeEffect(MobEffects.NIGHT_VISION);
+        if(mc.player != null)
+        	mc.player.removeEffect(MobEffects.NIGHT_VISION);
     }
 
     @Override
@@ -31,14 +32,15 @@ public class FullBright extends Feature implements PlayerTickListener {
 
     @Override
     public void onPre(PlayerTickEvent.Pre event) {
-        mc.player.addEffect(
-            new MobEffectInstance(
-                MobEffects.NIGHT_VISION,
-                -1,
-                1,
-                false,
-                false
-            )
-        );
+        if(mc.player != null)
+	        mc.player.addEffect(
+	            new MobEffectInstance(
+	                MobEffects.NIGHT_VISION,
+	                -1,
+	                1,
+	                false,
+	                false
+	            )
+	        );
     }
 }

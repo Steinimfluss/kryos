@@ -2,6 +2,8 @@ package net.kryos.util;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -35,5 +37,9 @@ public class InventoryUtil {
             }
         }
 		return -1;
+	}
+	
+	public static boolean hasItemIn(Item item, InteractionHand hand) {
+		return mc.player.getItemInHand(hand) != null && mc.player.getItemInHand(hand).getItem() == item;
 	}
 }	

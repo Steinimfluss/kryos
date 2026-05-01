@@ -17,7 +17,10 @@
 		"ClientboundSetEntityMotionPacketAccessor",
 		"MultiPlayerGameModeMixin",
 		"ClientLevelAccessor",
-		"LevelRendererMixin"
+		"LevelRendererMixin",
+		"MultiPlayerGameModeAccessor",
+		"InventoryMixin",
+		"GameRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

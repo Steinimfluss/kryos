@@ -22,7 +22,7 @@ public abstract class LivingEntityMixin {
     }
     
     private static MovementCorrection getMovementCorrection() {
-    	return MovementCorrection.getFromString(Kryos.featureManager.rotationFeature.movementCorrection.getValue());
+    	return MovementCorrection.getFromString(Kryos.featureManager.rotationFeature.movementCorrection.getValue().getName());
     }
 
     @Inject(method = "travel", at = @At("HEAD"))

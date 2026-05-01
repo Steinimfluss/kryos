@@ -7,17 +7,32 @@ import net.kryos.event.listener.impl.PlayerTickListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.BooleanSetting;
+import net.kryos.feature.setting.BooleanSettingBuilder;
 import net.kryos.feature.setting.NumberSetting;
+import net.kryos.feature.setting.NumberSettingBuilder;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.GameType;
 
 public class Offhand extends Feature implements PlayerTickListener {
-	private BooleanSetting crystalSetting = new BooleanSetting("Crystal");
-	private BooleanSetting totemSetting = new BooleanSetting("Totem");
-	private NumberSetting<Float> totemThreshold = new NumberSetting<Float>("Totem threshold", 10.0F, 0.0F, 40.0F, 0.5F);
+	private BooleanSetting crystalSetting = new BooleanSettingBuilder()
+			.name("Crystals")
+			.value(true)
+			.build();
+	
+	private BooleanSetting totemSetting = new BooleanSettingBuilder()
+			.name("Totems")
+			.value(true)
+			.build();
+	
+	private NumberSetting<Float> totemThreshold = new NumberSettingBuilder<Float>()
+			.name("Totem Threshold")
+			.value(10F)
+			.min(0.0F)
+			.max(100F)
+			.step(0.5F)
+			.build();
 	
 	public Offhand() {
 		super("Offhand", FeatureCategory.COMBAT);
@@ -36,9 +51,6 @@ public class Offhand extends Feature implements PlayerTickListener {
 
 	@Override
 	public void onPre(Pre event) {
-	    if (mc.player == null) return;
-	    if(mc.gameMode.getPlayerMode() != GameType.SURVIVAL) return;
-	    
 	    if(totemSetting.enabled && mc.player.getHealth() <= totemThreshold.getValue()) {
 		    if (mc.player.getOffhandItem().getItem() == Items.TOTEM_OF_UNDYING)
 		        return;
@@ -63,7 +75,7 @@ public class Offhand extends Feature implements PlayerTickListener {
 		for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
 	    	ItemStack item  = mc.player.getInventory().getItem(i);
 	        if (item.getItem() == Items.END_CRYSTAL) {
-	            return i;
+	            return Inventory.isHotbarSlot(i) ? i + 36 : i;
 	        }
 	    }
 
@@ -74,7 +86,7 @@ public class Offhand extends Feature implements PlayerTickListener {
 		for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
 	    	ItemStack item  = mc.player.getInventory().getItem(i);
 	        if (item.getItem() == Items.TOTEM_OF_UNDYING) {
-	            return i;
+	            return Inventory.isHotbarSlot(i) ? i + 36 : i;
 	        }
 	    }
 

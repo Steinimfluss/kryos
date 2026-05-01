@@ -1,7 +1,6 @@
 package net.kryos.feature.impl.combat;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import net.kryos.Kryos;
@@ -10,11 +9,20 @@ import net.kryos.event.impl.PlayerTickEvent.Pre;
 import net.kryos.event.listener.impl.PlayerTickListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
+import net.kryos.feature.setting.BooleanSetting;
+import net.kryos.feature.setting.BooleanSettingBuilder;
 import net.kryos.feature.setting.ModeSetting;
+import net.kryos.feature.setting.ModeSettingBuilder;
 import net.kryos.feature.setting.NumberSetting;
+import net.kryos.feature.setting.NumberSettingBuilder;
+import net.kryos.feature.setting.SplitterSetting;
+import net.kryos.feature.setting.SplitterSettingBuilder;
 import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
+import net.kryos.util.BlockUtil;
 import net.kryos.util.DamageUtil;
+import net.kryos.util.EntityUtil;
+import net.kryos.util.InventoryUtil;
 import net.kryos.util.RotationUtil;
 import net.kryos.util.Timer;
 import net.minecraft.core.BlockPos;
@@ -23,27 +31,103 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class CrystalAura extends Feature implements PlayerTickListener, Rotator {
-	private ModeSetting sortMode = new ModeSetting("Sort", "Distance", "Distance", "Health");
+	private static final AABB CRYSTAL_BOX = new AABB(
+	        -0.5, 0, -0.5,
+	         0.5, 2,  0.5
+	);
 	
-	private NumberSetting<Integer> reach = new NumberSetting<Integer>("Reach", 10, 1, 20, 1);
-	private NumberSetting<Long> delaySetting = new NumberSetting<Long>("Delay", 50L, 0L, 1000L, 10L); 
-	private NumberSetting<Float> minDamage = new NumberSetting<Float>("Min Target Damage", 10.0F, 0F, 100.0F, 0.5F); 
-	private NumberSetting<Float> maxDamage = new NumberSetting<Float>("Max Self Damage", 10.0F, 0F, 100.0F, 0.5F);
-	private NumberSetting<Float> rapidThreshold = new NumberSetting<Float>("Rapid threshold", 10.0F, 0F, 100.0F, 0.5F); 
+	private ModeSetting hand = new ModeSettingBuilder()
+			.name("Hand")
+			.mode("Main Hand")
+			.mode("Off Hand")
+			.value("Main Hand")
+			.build();
 	
-	private Timer delay = new Timer();
+	private NumberSetting<Float> destroyReach = new NumberSettingBuilder<Float>()
+			.name("Destroy Reach")
+			.value(7F)
+			.min(1.0F)
+			.max(8F)
+			.step(0.1F)
+			.build();
+	
+	private BooleanSetting destroy = new BooleanSettingBuilder()
+			.name("Destroy")
+			.value(true)
+			.setting(destroyReach)
+			.build();
+	
+	private NumberSetting<Float> placeReach = new NumberSettingBuilder<Float>()
+			.name("Place Reach")
+			.value(7F)
+			.min(1.0F)
+			.max(8F)
+			.step(0.1F)
+			.build();
+	
+	private BooleanSetting place = new BooleanSettingBuilder()
+			.name("Place")
+			.value(true)
+			.setting(placeReach)
+			.build();
+	
+	private NumberSetting<Long> delay = new NumberSettingBuilder<Long>()
+			.name("Action Delay")
+			.value(50L)
+			.min(0L)
+			.max(1000L)
+			.step(10L)
+			.build();
+	
+	private NumberSetting<Float> minDamage = new NumberSettingBuilder<Float>()
+			.name("Min Target Damage")
+			.value(10F)
+			.min(1F)
+			.max(100F)
+			.step(0.5F)
+			.build();
+	
+	private NumberSetting<Float> maxDamage = new NumberSettingBuilder<Float>()
+			.name("Max Self Damage")
+			.value(10F)
+			.min(1F)
+			.max(100F)
+			.step(0.5F)
+			.build();
+	
+	private SplitterSetting damageSplitter = new SplitterSettingBuilder()
+			.name("Damage")
+			.setting(minDamage)
+			.setting(maxDamage)
+			.build();
+	
+	private NumberSetting<Float> minHealth = new NumberSettingBuilder<Float>()
+			.name("Min Health")
+			.value(10F)
+			.min(1F)
+			.max(30F)
+			.step(0.5F)
+			.build();
+	
+	private BooleanSetting antiSuicide = new BooleanSettingBuilder()
+			.name("Anti Suicide")
+			.value(true)
+			.setting(minHealth)
+			.build();
+	
+	private Timer interactionTimer = new Timer();
 	
 	public CrystalAura() {
 		super("CrystalAura", FeatureCategory.COMBAT);
-		setSettings(sortMode, reach, minDamage, maxDamage, delaySetting, rapidThreshold);
+		addSettings(hand, destroy, place, delay, damageSplitter, antiSuicide);
 	}
 
 	@Override
@@ -60,43 +144,47 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 	@Override
 	public void onPre(Pre event) {
 		Kryos.rotationBus.unsubscribe(this);
-		if(mc.screen != null || mc.player == null) return;
 		
-		Scored<BlockPos> place = getBestPos();
+		if(!interactionTimer.check(delay.getValue()))
+			return;
+		else
+			interactionTimer.reset();
+		
+		Scored<BlockPos> place = getBestPlace();
 		Scored<EndCrystal> destroy = getBestDestroy();
 		
-		if(!delay.check(delaySetting.getValue()) && ((place != null && place.score < rapidThreshold.getValue()) && (destroy != null && destroy.score < rapidThreshold.getValue()))) {
-			return;
-		}
-		delay.reset();
+		Action action = getBetterAction(place, destroy);
 		
-		InteractionHand crystalHand = null;
-
-		if(mc.player.getMainHandItem() != null && mc.player.getMainHandItem().getItem() == Items.END_CRYSTAL) crystalHand = InteractionHand.MAIN_HAND;
-		if(mc.player.getOffhandItem() != null && mc.player.getOffhandItem().getItem() == Items.END_CRYSTAL) crystalHand = InteractionHand.OFF_HAND;
-		
-		if(place != null && (destroy == null || place.score() > destroy.score()) && crystalHand != null) {
-			Kryos.rotationBus.subscribe(this);
-	        Vec3 hit = place.object().above().getBottomCenter();
-			float[] rot = RotationUtil.getRotationsTo(hit);
-			if(Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
-		        BlockHitResult bhr = new BlockHitResult(
-		                hit,
-		                Direction.UP,
-		                place.object(),
-		                false
-		        );
+		if(action == Action.PLACE) {
+			InteractionHand crystalHand = getDesiredCrystalHand();
+			
+			if(InventoryUtil.hasItemIn(Items.END_CRYSTAL, crystalHand)) {
+		        Vec3 hit = BlockUtil.getClosestPointOnFace(place.object(), Direction.UP);
+		        
+				float[] rot = RotationUtil.getRotationsTo(hit);
 	
-		        mc.gameMode.useItemOn(
-		                mc.player,
-		                crystalHand,
-		                bhr
-		        ).consumesAction();
-		        mc.player.swing(crystalHand);
+				Kryos.rotationBus.subscribe(this);
+				if(Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
+			        BlockHitResult bhr = new BlockHitResult(
+			                hit,
+			                Direction.UP,
+			                place.object(),
+			                false
+			        );
+		
+			        mc.gameMode.useItemOn(
+			                mc.player,
+			                crystalHand,
+			                bhr
+			        ).consumesAction();
+			        mc.player.swing(crystalHand);
+				}
 			}
-		} else if(destroy != null) {
+		} 
+		
+		if(action == Action.DESTROY) {
 			Kryos.rotationBus.subscribe(this);
-			float[] rot = RotationUtil.getRotationsTo(destroy.object().position());
+			float[] rot = RotationUtil.getRotationsTo(EntityUtil.getClosestPoint(destroy.object()));
 			if(Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
 				mc.gameMode.attack(mc.player, destroy.object());
 				mc.player.swing(InteractionHand.MAIN_HAND);
@@ -109,96 +197,143 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 
 	}
 	
+	public Action getBetterAction(Scored<BlockPos> place, Scored<EndCrystal> destroy) {
+		if(destroy != null && score(destroy) >= score(place) && this.destroy.enabled)
+			return Action.DESTROY;
+		if(place != null && (score(place) > score(destroy)  && this.place.enabled))
+			return Action.PLACE;
+		return Action.NONE;
+	}
+	
+	public float score(Scored<?> scored) {
+		if(scored == null)
+			return 0F;
+		
+		return scored.score();
+	}
+	
 	public Scored<EndCrystal> getBestDestroy() {
 	    List<EndCrystal> crystals = new ArrayList<>();
-	    for (Entity entity : mc.level.entitiesForRendering()) {
-	        if (entity instanceof EndCrystal crystal) crystals.add(crystal);
-	    }
-
 	    List<LivingEntity> targets = new ArrayList<>();
+
 	    for (Entity entity : mc.level.entitiesForRendering()) {
-	        if (entity instanceof LivingEntity living && living != mc.player && living.isAlive()) {
+	        if (entity instanceof EndCrystal crystal) {
+	            crystals.add(crystal);
+	        } else if (entity instanceof LivingEntity living
+	                && living != mc.player
+	                && living.isAlive()
+	                && living.distanceTo(mc.player) < 16) {
 	            targets.add(living);
 	        }
 	    }
 
-	    return crystals.stream()
-	            .flatMap(crystal -> targets.stream()
-	                    .map(t -> {
-	                        float targetDamage = DamageUtil.getCrystalDamage(
-	                                t,
-	                                new Vec3(t.getX(), t.getY(), t.getZ()),
-	                                crystal.position()
-	                        );
+	    Scored<EndCrystal> best = null;
+	    float bestScore = 0f;
 
-	                        float selfDamage = DamageUtil.getCrystalDamage(
-	                                mc.player,
-	                                new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ()),
-	                                crystal.position()
-	                        );
-	                        
-	                        if(mc.player.distanceTo(crystal) > reach.getValue()) return null;
+	    for (EndCrystal crystal : crystals) {
 
-	                        if (targetDamage < minDamage.getValue()) return null;
-	                        if (selfDamage > maxDamage.getValue()) return null;
+	        if (EntityUtil.getClosestPoint(crystal)
+	                .distanceTo(mc.player.getEyePosition()) > destroyReach.getValue()) {
+	            continue;
+	        }
 
-	                        return new Scored<>(crystal, targetDamage);
-	                    })
-	            )
-	            .filter(x -> x != null)
-	            .max(Comparator.comparingDouble(Scored::score))
-	            .orElse(null);
+	        for (LivingEntity t : targets) {
+	            float targetDamage = DamageUtil.getCrystalDamage(
+	                    t,
+	                    new Vec3(t.getX(), t.getY(), t.getZ()),
+	                    crystal.position()
+	            );
+
+	            if (targetDamage < minDamage.getValue()) continue;
+
+	            float selfDamage = DamageUtil.getCrystalDamage(
+	                    mc.player,
+	                    new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ()),
+	                    crystal.position()
+	            );
+
+	            if (selfDamage > maxDamage.getValue()) continue;
+	            if (antiSuicide.enabled && mc.player.getHealth() - selfDamage < minHealth.getValue()) continue;
+
+	            if (targetDamage > bestScore) {
+	                bestScore = targetDamage;
+	                best = new Scored<>(crystal, targetDamage);
+	            }
+	        }
+	    }
+	    return best;
 	}
 
-	public Scored<BlockPos> getBestPos() {
+	public Scored<BlockPos> getBestPlace() {
 	    List<BlockPos> positions = getPlaceableBlocks(mc.player.blockPosition());
-
 	    List<LivingEntity> targets = new ArrayList<>();
+
 	    for (Entity entity : mc.level.entitiesForRendering()) {
-	        if (entity instanceof LivingEntity living && living != mc.player && living.isAlive()) {
+	        if (entity instanceof LivingEntity living
+	                && living != mc.player
+	                && living.isAlive()
+	                && living.distanceTo(mc.player) < 16) {
 	            targets.add(living);
 	        }
 	    }
 
-	    return positions.stream()
-	            .map(pos -> {
-	                Vec3 crystalPos = pos.above().getBottomCenter();
+	    Scored<BlockPos> best = null;
+	    float bestScore = 0f;
 
-	                float bestTargetDamage = (float) targets.stream()
-	                        .mapToDouble(t -> DamageUtil.getCrystalDamage(
-	                                t,
-	                                new Vec3(t.getX(), t.getY(), t.getZ()),
-	                                crystalPos
-	                        ))
-	                        .max()
-	                        .orElse(0);
+	    for (BlockPos pos : positions) {
+	        Vec3 crystalPos = pos.above().getBottomCenter();
 
-	                float selfDamage = DamageUtil.getCrystalDamage(
-	                        mc.player,
-	                        new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ()),
-	                        crystalPos
-	                );
+	        float maxTargetDamage = 0f;
 
-	                if (bestTargetDamage < minDamage.getValue()) return null;
-	                if (selfDamage > maxDamage.getValue()) return null;
+	        for (LivingEntity t : targets) {
+	            float dmg = DamageUtil.getCrystalDamage(
+	                    t,
+	                    new Vec3(t.getX(), t.getY(), t.getZ()),
+	                    crystalPos
+	            );
+	            if (dmg > maxTargetDamage) {
+	                maxTargetDamage = dmg;
+	            }
+	        }
 
-	                return new Scored<>(pos, bestTargetDamage);
-	            })
-	            .filter(x -> x != null)
-	            .max(Comparator.comparingDouble(Scored::score))
-	            .orElse(null);
+	        if (maxTargetDamage < minDamage.getValue()) continue;
+
+	        float selfDamage = DamageUtil.getCrystalDamage(
+	                mc.player,
+	                new Vec3(mc.player.getX(), mc.player.getY(), mc.player.getZ()),
+	                crystalPos
+	        );
+
+	        if (selfDamage > maxDamage.getValue()) continue;
+	        if (antiSuicide.enabled && mc.player.getHealth() - selfDamage < minHealth.getValue()) continue;
+
+	        if (BlockUtil.getClosestPointOnFace(pos, Direction.UP)
+	                .distanceTo(mc.player.getEyePosition()) > placeReach.getValue()) {
+	            continue;
+	        }
+
+	        if (maxTargetDamage > bestScore) {
+	            bestScore = maxTargetDamage;
+	            best = new Scored<>(pos, maxTargetDamage);
+	        }
+	    }
+
+	    return best;
+	}
+	
+	private InteractionHand getDesiredCrystalHand() {
+		return hand.getString().equalsIgnoreCase("Main Hand") ? InteractionHand.MAIN_HAND : InteractionHand.OFF_HAND;
 	}
 
 	public List<BlockPos> getPlaceableBlocks(BlockPos player) {
 		List<BlockPos> positions = new ArrayList<BlockPos>();
+		int reach = Math.round(placeReach.getValue()) + 1;
 		
-		for(int i = -reach.getValue(); i < reach.getValue(); i++) {
-			for(int j = -reach.getValue(); j < reach.getValue(); j++) {
-				for(int k = -reach.getValue(); k < reach.getValue(); k++) {
+		for(int i = -reach; i < reach; i++) {
+			for(int j = -reach; j < reach; j++) {
+				for(int k = -reach; k < reach; k++) {
 					BlockPos pos = player.offset(i, j, k);
 					BlockPos above = player.offset(i, j + 1, k);
-					
-					if(above.getBottomCenter().distanceTo(mc.player.getEyePosition()) > reach.getValue()) continue;
 					
 					Block posBlock = mc.level.getBlockState(pos).getBlock();
 					Block aboveBlock = mc.level.getBlockState(above).getBlock();
@@ -219,64 +354,28 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 		return positions;
 	}
 
-    private boolean playerIntersects(BlockPos pos) {
-        var box = new net.minecraft.world.phys.AABB(
-                pos.getX(), pos.getY(), pos.getZ(),
-                pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1
-        );
+	private boolean entityIntersects(BlockPos pos) {
+	    AABB box = getCrystalPlacementBox(pos);
 
-        return mc.player.getBoundingBox().intersects(box);
-    }
-
-    private boolean entityIntersects(BlockPos pos) {
-        var box = new net.minecraft.world.phys.AABB(
-                pos.getX(), pos.getY(), pos.getZ(),
-                pos.getX() + 1, pos.getY() + 1, pos.getZ() + 1
-        );
-
-        for (var entity : mc.level.entitiesForRendering()) {
-            if (entity == mc.player) continue;
-
-            if (entity.getBoundingBox().intersects(box)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-	
-	public LivingEntity getBestTarget() {
-	    LivingEntity best = null;
-
-	    for (Entity entity : mc.level.entitiesForRendering()) {
-	        if (!(entity instanceof LivingEntity)) continue;
-	        if(entity == mc.player) continue;
-	        LivingEntity e = (LivingEntity) entity;
-
+	    for (Entity e : mc.level.entitiesForRendering()) {
 	        if (e == mc.player) continue;
-	        if (e.isDeadOrDying()) continue;
+	        if (!e.isAlive()) continue;
 
-	        if(!(e instanceof Player))
-	        	continue;
-
-	        if (best == null) {
-	            best = e;
-	            continue;
-	        }
-
-	        if (sortMode.getValue().equalsIgnoreCase("Distance")) {
-	            double d1 = mc.player.distanceToSqr(e);
-	            double d2 = mc.player.distanceToSqr(best);
-	            if (d1 < d2) best = e;
-	        } else {
-	            float h1 = e.getHealth();
-	            float h2 = best.getHealth();
-	            if (h1 < h2) best = e;
+	        if (e.getBoundingBox().intersects(box)) {
+	            return true;
 	        }
 	    }
-
-	    return best;
+	    return false;
 	}
+
+	private boolean playerIntersects(BlockPos pos) {
+	    AABB box = getCrystalPlacementBox(pos);
+	    return mc.player.getBoundingBox().intersects(box);
+	}
+
+    public AABB getCrystalPlacementBox(BlockPos pos) {
+        return CRYSTAL_BOX.move(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+    }
 
 	@Override
 	public RotationPrivilege getRotationPrivilege() {
@@ -284,4 +383,10 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 	}
 	
 	public record Scored<T>(T object, float score) {}
+	
+	static enum Action {
+		PLACE,
+		DESTROY,
+		NONE;
+	}
 }

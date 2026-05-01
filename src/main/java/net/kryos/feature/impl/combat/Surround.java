@@ -12,7 +12,9 @@ import net.kryos.event.listener.impl.PlayerTickListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.BooleanSetting;
+import net.kryos.feature.setting.BooleanSettingBuilder;
 import net.kryos.feature.setting.NumberSetting;
+import net.kryos.feature.setting.NumberSettingBuilder;
 import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
 import net.kryos.util.RotationUtil;
@@ -28,9 +30,18 @@ import net.minecraft.world.phys.Vec3;
 
 public class Surround extends Feature implements PlayerTickListener, Rotator {
 
-    private final NumberSetting<Long> placeDelay =
-            new NumberSetting<>("Place Delay", 100L, 0L, 1000L, 10L);
-    private final BooleanSetting silentSwap = new BooleanSetting("Silent Swap");
+    private final NumberSetting<Long> placeDelay = new NumberSettingBuilder<Long>()
+    		.name("Place Delay")
+    		.value(100L)
+    		.min(0L)
+    		.max(1000L)
+    		.step(10L)
+    		.build();
+    
+    private final BooleanSetting silentSwap = new BooleanSettingBuilder()
+    		.name("Silent Swap")
+    		.value(true)
+    		.build();
 
     private final Timer placeTimer = new Timer();
 
@@ -105,10 +116,11 @@ public class Surround extends Feature implements PlayerTickListener, Rotator {
 
         var box = mc.player.getBoundingBox();
 
+        double epsylon = 0.000001;
         double minX = box.minX;
-        double maxX = box.maxX;
+        double maxX = box.maxX - epsylon;
         double minZ = box.minZ;
-        double maxZ = box.maxZ;
+        double maxZ = box.maxZ - epsylon;
         double y = Math.floor(box.minY);
 
         double[][] corners = {
@@ -163,7 +175,8 @@ public class Surround extends Feature implements PlayerTickListener, Rotator {
     }
     
 
-    private boolean tryPlaceWithNeighbors(BlockPos pos, int slot) {
+    @SuppressWarnings("deprecation")
+	private boolean tryPlaceWithNeighbors(BlockPos pos, int slot) {
         Direction[] dirs = {Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST, Direction.UP, Direction.DOWN};
 
         for (Direction dir : dirs) {

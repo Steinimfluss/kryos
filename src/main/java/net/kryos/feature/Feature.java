@@ -1,5 +1,9 @@
 package net.kryos.feature;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
 import net.kryos.feature.setting.Setting;
 import net.minecraft.client.Minecraft;
 
@@ -7,9 +11,10 @@ public abstract class Feature {
 	protected static final Minecraft mc = Minecraft.getInstance();
 	public final String name;
 	private boolean enabled;
-	private Setting[] settings = new Setting[0];
+	private List<Setting> settings = new ArrayList<Setting>();
 	public final FeatureCategory category;
-	private int key = -1;
+	private Keybind key;
+	private String suffix;
 	
 	public Feature(String name, FeatureCategory category) {
 		this.name = name;
@@ -28,27 +33,43 @@ public abstract class Feature {
 			onDisable();
 	}
 	
+	public boolean hasSettings() {
+		return settings.size() > 0;
+	}
+	
 	public void toggle() {
 		setEnabled(!enabled);
 	}
 
-	public Setting[] getSettings() {
+	public List<Setting> getSettings() {
 		return settings;
 	}
 
 	public void setSettings(Setting... settings) {
-		this.settings = settings;
+		this.settings = Arrays.asList(settings);
+	}
+	
+	public void addSettings(Setting... settings) {
+		Arrays.asList(settings).forEach(this.settings::add);
 	}
 
 	public boolean isEnabled() {
 		return enabled;
 	}
-	
-	public int getKey() {
+
+	public Keybind getKey() {
 		return key;
 	}
-	
-	public void setKey(int key) {
+
+	public void setKey(Keybind key) {
 		this.key = key;
+	}
+
+	public String getSuffix() {
+		return suffix;
+	}
+
+	public void setSuffix(String suffix) {
+		this.suffix = suffix;
 	}
 }
