@@ -5,7 +5,9 @@ import java.util.List;
 
 import net.kryos.event.impl.KeyPressEvent;
 import net.kryos.event.listener.impl.KeyPressListener;
+import net.kryos.feature.impl.combat.Criticals;
 import net.kryos.feature.impl.combat.CrystalAura;
+import net.kryos.feature.impl.combat.KillAura;
 import net.kryos.feature.impl.combat.Offhand;
 import net.kryos.feature.impl.combat.Surround;
 import net.kryos.feature.impl.combat.Velocity;
@@ -19,6 +21,7 @@ import net.kryos.feature.impl.render.Fog;
 import net.kryos.feature.impl.render.FullBright;
 import net.kryos.feature.impl.render.HoleESP;
 import net.kryos.feature.impl.render.NoRender;
+import net.kryos.feature.impl.render.NotificationFeature;
 import net.kryos.feature.impl.render.ViewModel;
 import net.kryos.feature.impl.world.PacketMine;
 import net.minecraft.client.Minecraft;
@@ -43,6 +46,9 @@ public class FeatureManager implements KeyPressListener {
     public ESP esp = new ESP();
     public HoleESP holeEsp = new HoleESP();
     public Speed speed = new Speed();
+    public NotificationFeature notifications = new NotificationFeature();
+    public KillAura killaura = new KillAura();
+    public Criticals criticals = new Criticals();
     
     public FeatureManager() {
         loadFeatures();
@@ -65,6 +71,9 @@ public class FeatureManager implements KeyPressListener {
     	features.add(esp);
     	features.add(holeEsp);
     	features.add(speed);
+    	features.add(notifications);
+    	features.add(killaura);
+    	features.add(criticals);
     }
 
     public List<Feature> getFeatures() {

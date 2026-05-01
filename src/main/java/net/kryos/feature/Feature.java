@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import net.kryos.Kryos;
 import net.kryos.feature.setting.Setting;
+import net.kryos.notification.Notification;
+import net.kryos.notification.NotificationType;
 import net.minecraft.client.Minecraft;
 
 public abstract class Feature {
@@ -31,6 +34,8 @@ public abstract class Feature {
 			onEnable();
 		else
 			onDisable();
+		
+		Kryos.notificationBus.post(new Notification("Feature " + (enabled ? "enabled" : "disabled"), name, NotificationType.INFO));
 	}
 	
 	public boolean hasSettings() {

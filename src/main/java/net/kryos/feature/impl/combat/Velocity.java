@@ -42,6 +42,8 @@ public class Velocity extends Feature implements HandleSetEntityMotionListener {
 
 	@Override
 	public void setMotion(HandleSetEntityMotionEvent event) {
+		if(mc.player == null) return;
+		
 		setSuffix(xzSetting.getValue() + ":" + ySetting.getValue());
 		
 		if(event.getId() != mc.player.getId()) return;

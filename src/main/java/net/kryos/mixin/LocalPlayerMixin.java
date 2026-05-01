@@ -23,7 +23,7 @@ public class LocalPlayerMixin {
 	private float packet$lastYaw, packet$lastPitch;
 	
     @Inject(method = "sendPosition", at = @At("HEAD"))
-	private void sendPosition$HEAD(CallbackInfo ci) {
+	private void kryos$sendPosition$HEAD(CallbackInfo ci) {
     	packet$lastYaw = mc.player.getYRot();
     	packet$lastPitch = mc.player.getXRot();
     	

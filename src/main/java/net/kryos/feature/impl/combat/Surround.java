@@ -15,6 +15,8 @@ import net.kryos.feature.setting.BooleanSetting;
 import net.kryos.feature.setting.BooleanSettingBuilder;
 import net.kryos.feature.setting.NumberSetting;
 import net.kryos.feature.setting.NumberSettingBuilder;
+import net.kryos.notification.Notification;
+import net.kryos.notification.NotificationType;
 import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
 import net.kryos.util.RotationUtil;

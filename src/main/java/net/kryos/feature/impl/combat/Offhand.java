@@ -21,11 +21,6 @@ public class Offhand extends Feature implements PlayerTickListener {
 			.value(true)
 			.build();
 	
-	private BooleanSetting totemSetting = new BooleanSettingBuilder()
-			.name("Totems")
-			.value(true)
-			.build();
-	
 	private NumberSetting<Float> totemThreshold = new NumberSettingBuilder<Float>()
 			.name("Totem Threshold")
 			.value(10F)
@@ -33,10 +28,16 @@ public class Offhand extends Feature implements PlayerTickListener {
 			.max(100F)
 			.step(0.5F)
 			.build();
+
+	private BooleanSetting totemSetting = new BooleanSettingBuilder()
+			.name("Totems")
+			.value(true)
+			.setting(totemThreshold)
+			.build();
 	
 	public Offhand() {
 		super("Offhand", FeatureCategory.COMBAT);
-		setSettings(crystalSetting, totemSetting, totemThreshold);
+		setSettings(crystalSetting, totemSetting);
 	}
 
 	@Override
@@ -56,21 +57,23 @@ public class Offhand extends Feature implements PlayerTickListener {
 		        return;
 	
 		    int slot = findTotemSlot();
-		    if (slot == -1) return;
-		    mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, mc.player);
-		    return;
+		    if (slot != -1) {
+			    mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, mc.player);
+			    return;
+		    }
 	    }
 	    
 	    if(crystalSetting.enabled) {
 			if(mc.player.getOffhandItem() != null && mc.player.getOffhandItem().getItem() != Items.END_CRYSTAL) {
 			    int slot = findCrystalSlot();
-			    if (slot == -1) return;
-			    mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, mc.player);
-		    	return;
+			    if (slot != -1) {
+				    mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, Inventory.SLOT_OFFHAND, ContainerInput.SWAP, mc.player);
+			    	return;
+			    }
 			}
 	    }
 	}
-
+	
 	private int findCrystalSlot() {
 		for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
 	    	ItemStack item  = mc.player.getInventory().getItem(i);
