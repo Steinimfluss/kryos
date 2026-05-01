@@ -12,6 +12,7 @@ import net.kryos.feature.impl.combat.Offhand;
 import net.kryos.feature.impl.combat.Surround;
 import net.kryos.feature.impl.combat.Velocity;
 import net.kryos.feature.impl.misc.FakePlayer;
+import net.kryos.feature.impl.misc.MiddleClickFeature;
 import net.kryos.feature.impl.misc.RotationFeature;
 import net.kryos.feature.impl.movement.Speed;
 import net.kryos.feature.impl.render.ClickGui;
@@ -24,6 +25,7 @@ import net.kryos.feature.impl.render.NoRender;
 import net.kryos.feature.impl.render.NotificationFeature;
 import net.kryos.feature.impl.render.ViewModel;
 import net.kryos.feature.impl.world.PacketMine;
+import net.kryos.feature.impl.world.Scaffold;
 import net.minecraft.client.Minecraft;
 
 public class FeatureManager implements KeyPressListener {
@@ -49,6 +51,8 @@ public class FeatureManager implements KeyPressListener {
     public NotificationFeature notifications = new NotificationFeature();
     public KillAura killaura = new KillAura();
     public Criticals criticals = new Criticals();
+    public MiddleClickFeature middleClick = new MiddleClickFeature();
+    public Scaffold scaffold = new Scaffold();
     
     public FeatureManager() {
         loadFeatures();
@@ -74,6 +78,8 @@ public class FeatureManager implements KeyPressListener {
     	features.add(notifications);
     	features.add(killaura);
     	features.add(criticals);
+    	features.add(middleClick);
+    	features.add(scaffold);
     }
 
     public List<Feature> getFeatures() {

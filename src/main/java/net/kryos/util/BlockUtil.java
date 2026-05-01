@@ -66,10 +66,8 @@ public class BlockUtil {
         return speed;
     }
 	
-	public static Vec3 getClosestPointOnFace(BlockPos pos, Direction face) {
+	public static Vec3 getClosestPointOnFace(Vec3 p, BlockPos pos, Direction face) {
 	    if (mc.player == null) return Vec3.ZERO;
-
-	    Vec3 player = mc.player.getEyePosition();
 
 	    double minX = pos.getX();
 	    double minY = pos.getY();
@@ -78,9 +76,9 @@ public class BlockUtil {
 	    double maxY = minY + 1;
 	    double maxZ = minZ + 1;
 
-	    double x = clamp(player.x, minX, maxX);
-	    double y = clamp(player.y, minY, maxY);
-	    double z = clamp(player.z, minZ, maxZ);
+	    double x = clamp(p.x, minX, maxX);
+	    double y = clamp(p.y, minY, maxY);
+	    double z = clamp(p.z, minZ, maxZ);
 
 	    switch (face) {
 	        case DOWN -> y = minY;
@@ -92,6 +90,12 @@ public class BlockUtil {
 	    }
 
 	    return new Vec3(x, y, z);
+	}
+	
+	public static Vec3 getClosestPointOnFace(BlockPos pos, Direction face) {
+	    if (mc.player == null) return Vec3.ZERO;
+
+	    return getClosestPointOnFace(mc.player.position(), pos, face);
 	}
 
 	private static double clamp(double v, double min, double max) {

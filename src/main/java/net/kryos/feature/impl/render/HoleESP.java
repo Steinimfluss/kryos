@@ -114,6 +114,7 @@ public class HoleESP extends Feature implements RenderLevelListener {
 	
 	private Safety getPosSafety(BlockPos pos) {
 	    if(mc.level.getBlockState(pos).getBlock() != Blocks.AIR) return Safety.NONE;
+	    if(mc.level.getBlockState(pos.above()).getBlock() != Blocks.AIR) return Safety.NONE;
 	    	
 	    int[][] offsets = {
 	        {1, 0, 0}, {-1, 0, 0},

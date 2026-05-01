@@ -12,7 +12,6 @@ import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
 import net.kryos.util.EntityUtil;
 import net.kryos.util.RotationUtil;
-import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
@@ -104,6 +103,6 @@ public class KillAura extends Feature implements Rotator, PlayerTickListener {
 
 	@Override
 	public RotationPrivilege getRotationPrivilege() {
-		return RotationPrivilege.MEDIUM;
+		return RotationPrivilege.LOW;
 	}
 }

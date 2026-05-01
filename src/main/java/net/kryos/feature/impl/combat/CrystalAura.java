@@ -3,10 +3,14 @@ package net.kryos.feature.impl.combat;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.mojang.blaze3d.vertex.PoseStack;
+
 import net.kryos.Kryos;
 import net.kryos.event.impl.PlayerTickEvent.Post;
 import net.kryos.event.impl.PlayerTickEvent.Pre;
+import net.kryos.event.impl.RenderLevelEvent;
 import net.kryos.event.listener.impl.PlayerTickListener;
+import net.kryos.event.listener.impl.RenderLevelListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.setting.BooleanSetting;
@@ -17,14 +21,17 @@ import net.kryos.feature.setting.NumberSetting;
 import net.kryos.feature.setting.NumberSettingBuilder;
 import net.kryos.feature.setting.SplitterSetting;
 import net.kryos.feature.setting.SplitterSettingBuilder;
+import net.kryos.gui.MainTheme;
 import net.kryos.rotation.RotationPrivilege;
 import net.kryos.rotation.Rotator;
 import net.kryos.util.BlockUtil;
 import net.kryos.util.DamageUtil;
 import net.kryos.util.EntityUtil;
 import net.kryos.util.InventoryUtil;
+import net.kryos.util.LevelRenderUtil;
 import net.kryos.util.RotationUtil;
 import net.kryos.util.Timer;
+import net.minecraft.client.Camera;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionHand;
@@ -38,7 +45,7 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class CrystalAura extends Feature implements PlayerTickListener, Rotator {
+public class CrystalAura extends Feature implements PlayerTickListener, RenderLevelListener, Rotator {
 	private static final AABB CRYSTAL_BOX = new AABB(
 	        -0.5, 0, -0.5,
 	         0.5, 2,  0.5
@@ -124,6 +131,8 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 			.build();
 	
 	private Timer interactionTimer = new Timer();
+	private BlockPos placePos;
+	private Entity target;
 	
 	public CrystalAura() {
 		super("CrystalAura", FeatureCategory.COMBAT);
@@ -143,6 +152,8 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 
 	@Override
 	public void onPre(Pre event) {
+		placePos = null;
+		target = null;
 		Kryos.rotationBus.unsubscribe(this);
 		
 		if(!interactionTimer.check(delay.getValue()))
@@ -160,6 +171,7 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 			
 			if(InventoryUtil.hasItemIn(Items.END_CRYSTAL, crystalHand)) {
 		        Vec3 hit = BlockUtil.getClosestPointOnFace(place.object(), Direction.UP);
+		        placePos = place.object();
 		        
 				float[] rot = RotationUtil.getRotationsTo(hit);
 	
@@ -182,13 +194,17 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 			}
 		} 
 		
-		if(action == Action.DESTROY) {
-			Kryos.rotationBus.subscribe(this);
-			float[] rot = RotationUtil.getRotationsTo(EntityUtil.getClosestPoint(destroy.object()));
-			if(Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
-				mc.gameMode.attack(mc.player, destroy.object());
-				mc.player.swing(InteractionHand.MAIN_HAND);
-			}
+		if (action == Action.DESTROY) {
+		    Kryos.rotationBus.subscribe(this);
+		    float[] rot = RotationUtil.getRotationsTo(EntityUtil.getClosestPoint(destroy.object()));
+
+		    if (Kryos.rotationBus.rotate(rot[0], rot[1], this)) {
+		        target = destroy.object();
+		        mc.gameMode.attack(mc.player, target);
+		        mc.player.swing(InteractionHand.MAIN_HAND);
+
+		        mc.level.removeEntity(target.getId(), Entity.RemovalReason.DISCARDED);
+		    }
 		}
 	}
 
@@ -388,5 +404,24 @@ public class CrystalAura extends Feature implements PlayerTickListener, Rotator 
 		PLACE,
 		DESTROY,
 		NONE;
+	}
+
+	@Override
+	public void renderLevel(RenderLevelEvent event) {
+        Camera camera = mc.gameRenderer.getMainCamera();
+        PoseStack poseStack = new PoseStack();
+        poseStack.last().pose().mul(event.getModelViewMatrix());
+        poseStack.translate(
+            -camera.position().x,
+            -camera.position().y,
+            -camera.position().z
+        );
+        
+        poseStack.pushPose();
+        if(target != null)
+        	LevelRenderUtil.drawFilledBox(poseStack, new AABB(target.blockPosition().below()), MainTheme.SELECTED);
+        if(placePos != null)
+        	LevelRenderUtil.drawFilledBox(poseStack, new AABB(placePos), MainTheme.SELECTED);
+		poseStack.popPose();
 	}
 }
