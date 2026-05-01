@@ -202,8 +202,6 @@ public class CrystalAura extends Feature implements PlayerTickListener, RenderLe
 		        target = destroy.object();
 		        mc.gameMode.attack(mc.player, target);
 		        mc.player.swing(InteractionHand.MAIN_HAND);
-
-		        mc.level.removeEntity(target.getId(), Entity.RemovalReason.DISCARDED);
 		    }
 		}
 	}
