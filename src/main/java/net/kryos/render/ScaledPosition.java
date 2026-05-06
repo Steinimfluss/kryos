@@ -22,19 +22,19 @@ public class ScaledPosition {
 		return y;
 	}
 	
-	public void setX(float x) {
-		this.x = x / mc.getWindow().getGuiScaledWidth();
+	public void setX(int x) {
+	    this.x = (float)x / mc.getWindow().getGuiScaledWidth();
+	}
+
+	public void setY(int y) {
+	    this.y = (float)y / mc.getWindow().getGuiScaledHeight();
 	}
 	
-	public void setY(float y) {
-		this.y = y / mc.getWindow().getGuiScaledHeight();
+	public int getX() {
+	    return (int)(mc.getWindow().getGuiScaledWidth() * x);
 	}
-	
-	public float getX() {
-		return mc.getWindow().getGuiScaledWidth() * x;
-	}
-	
-	public float getY() {
-		return mc.getWindow().getGuiScaledHeight() * y;
+
+	public int getY() {
+	    return (int)(mc.getWindow().getGuiScaledHeight() * y);
 	}
 }

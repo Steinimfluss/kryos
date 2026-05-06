@@ -1,5 +1,7 @@
 package net.kryos.feature;
 
+import java.util.Optional;
+
 public enum FeatureCategory {
 	COMBAT("Combat"),
 	RENDER("Render"),
@@ -7,18 +9,22 @@ public enum FeatureCategory {
 	MISC("Misc"),
 	MOVEMENT("Movement");
 	
-	public final String name;
+	private final String name;
 	
 	FeatureCategory(String name) {
 		this.name = name;
 	}
 	
-	public static FeatureCategory getByName(String name) {
+	public static Optional<FeatureCategory> getByName(String name) {
 		for(FeatureCategory c : FeatureCategory.values()) {
 			if(c.name.equalsIgnoreCase(name)) {
-				return c;
+				return Optional.of(c);
 			}
 		}
-		return null;
+		return Optional.empty();
+	}
+
+	public String getName() {
+		return name;
 	}
 }

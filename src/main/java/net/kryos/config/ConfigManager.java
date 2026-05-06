@@ -3,6 +3,7 @@ package net.kryos.config;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Optional;
 
 import com.google.common.io.Files;
 import com.google.gson.Gson;
@@ -13,11 +14,7 @@ import com.google.gson.JsonObject;
 
 import net.kryos.Kryos;
 import net.kryos.feature.Feature;
-import net.kryos.feature.Keybind;
-import net.kryos.feature.setting.Setting;
-import net.kryos.feature.setting.BooleanSetting;
-import net.kryos.feature.setting.ModeSetting;
-import net.kryos.feature.setting.NumberSetting;
+import net.kryos.setting.Setting;
 
 public class ConfigManager {
     public void save(Path path) throws IOException {
@@ -37,53 +34,29 @@ public class ConfigManager {
         for (Feature feature : Kryos.featureManager.getFeatures()) {
             JsonObject featureNode = new JsonObject();
 
-            featureNode.addProperty("name", feature.name);
+            featureNode.addProperty("id", feature.getId());
             featureNode.addProperty("enabled", feature.isEnabled());
+            Optional<Integer> key = feature.getKey();
+            
+            if(key.isPresent())
+            	featureNode.addProperty("key", key.get());
 
-            if (feature.getKey() != null) {
-                JsonObject keyNode = new JsonObject();
-                keyNode.addProperty("input", feature.getKey().getInput());
-                keyNode.addProperty("scancode", feature.getKey().getScancode());
-                featureNode.add("key", keyNode);
+            JsonArray settingsArray = new JsonArray();
+            
+            for(Setting<?> setting : feature.getSettings()) {
+                JsonObject settingNode = new JsonObject();
+            	settingNode.addProperty("id", setting.getId());
+            	settingNode.addProperty("value", setting.getValueString());
+                settingsArray.add(settingNode);
             }
-
-            JsonObject settingsNode = new JsonObject();
-            for (Setting setting : feature.getSettings()) {
-                settingsNode.add(setting.getName(), saveSetting(setting));
-            }
-
-            featureNode.add("settings", settingsNode);
+            
+            featureNode.add("settings", settingsArray);
             featuresArray.add(featureNode);
         }
 
         root.add("features", featuresArray);
 
-        Files.write(
-                gson.toJson(root).getBytes(StandardCharsets.UTF_8),
-                path.toFile()
-        );
-    }
-
-    private JsonObject saveSetting(Setting setting) {
-        JsonObject node = new JsonObject();
-
-        if (setting instanceof BooleanSetting bs) {
-            node.addProperty("value", bs.enabled);
-        } else if (setting instanceof ModeSetting ms) {
-            node.addProperty("value", ms.getValue().getName());
-        } else if (setting instanceof NumberSetting<?> ns) {
-            node.addProperty("value", ns.getValue().doubleValue());
-        }
-
-        if (setting.hasSettings()) {
-            JsonObject sub = new JsonObject();
-            for (Setting child : setting.getSettings()) {
-                sub.add(child.getName(), saveSetting(child));
-            }
-            node.add("subsettings", sub);
-        }
-
-        return node;
+        Files.write(gson.toJson(root).getBytes(StandardCharsets.UTF_8), path.toFile());
     }
 
     public void load(Path path) throws IOException {
@@ -96,57 +69,37 @@ public class ConfigManager {
                 .read();
 
         JsonObject root = gson.fromJson(json, JsonObject.class);
-        if (root == null || !root.has("features"))
-            return;
 
         JsonArray featuresArray = root.getAsJsonArray("features");
 
-        for (JsonElement element : featuresArray) {
-            JsonObject featureNode = element.getAsJsonObject();
+        for (JsonElement featureElement : featuresArray) {
+            JsonObject featureNode = featureElement.getAsJsonObject();
 
-            String name = featureNode.get("name").getAsString();
+            String id = featureNode.get("id").getAsString();
             boolean enabled = featureNode.get("enabled").getAsBoolean();
 
-            Feature feature = Kryos.featureManager.getFeatureByName(name);
-            if (feature == null)
-                continue;
-
-            JsonObject keyNode = featureNode.getAsJsonObject("key");
-            if (keyNode != null) {
-                int input = keyNode.get("input").getAsInt();
-                int scancode = keyNode.get("scancode").getAsInt();
-                feature.setKey(new Keybind(input, scancode));
-            }
+            Feature feature = Kryos.featureManager.getFeaturesById(id).orElseThrow();
 
             feature.setEnabled(enabled);
+            
+            JsonElement keyElement = featureNode.get("key");
 
-            if (featureNode.has("settings")) {
-                JsonObject settingsNode = featureNode.getAsJsonObject("settings");
-
-                for (Setting setting : feature.getSettings()) {
-                    if (settingsNode.has(setting.getName())) {
-                        loadSetting(setting, settingsNode.getAsJsonObject(setting.getName()));
-                    }
-                }
+            if (keyElement != null && !keyElement.isJsonNull()) {
+                int key = keyElement.getAsInt();
+                feature.setKey(Optional.of(key));
             }
-        }
-    }
 
-    private void loadSetting(Setting setting, JsonObject node) {
-        if (setting instanceof BooleanSetting bs) {
-            bs.enabled = node.get("value").getAsBoolean();
-        } else if (setting instanceof ModeSetting ms) {
-            ms.setValue(node.get("value").getAsString());
-        } else if (setting instanceof NumberSetting<?> ns) {
-            ns.setValueFromDouble(node.get("value").getAsDouble());
-        }
-
-        if (node.has("subsettings")) {
-            JsonObject sub = node.getAsJsonObject("subsettings");
-            for (Setting child : setting.getSettings()) {
-                if (sub.has(child.getName())) {
-                    loadSetting(child, sub.getAsJsonObject(child.getName()));
-                }
+            JsonArray settingsArray = featureNode.getAsJsonArray("settings");
+            for(JsonElement settingElement : settingsArray) {
+                JsonObject settingNode = settingElement.getAsJsonObject();
+                
+                String settingId = settingNode.get("id").getAsString();
+                String settingValue = settingNode.get("value").getAsString();
+            	
+                Optional<Setting<?>> setting = feature.getSettingById(settingId);
+                
+                if(setting.isPresent())
+                	setting.get().setValueString(settingValue);
             }
         }
     }

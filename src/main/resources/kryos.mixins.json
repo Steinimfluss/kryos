@@ -3,24 +3,18 @@
 	"package": "net.kryos.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"KeyboardHandlerMixin",
-		"GuiMixin",
-		"ItemInHandRendererMixin",
-		"FogRendererMixin",
-		"AbstractClientPlayerMixin",
-		"LocalPlayerMixin",
-		"AvatarRendererMixin",
-		"LivingEntityMixin",
-		"ClientInputAccessor",
-		"KeyboardInputMixin",
-		"ClientPacketListenerMixin",
-		"ClientboundSetEntityMotionPacketAccessor",
-		"MultiPlayerGameModeMixin",
-		"ClientLevelAccessor",
-		"LevelRendererMixin",
-		"MultiPlayerGameModeAccessor",
-		"InventoryMixin",
-		"GameRendererMixin"
+		"input.KeyboardHandlerMixin",
+		
+		"render.GuiMixin",
+		"render.AvatarRendererMixin",
+		
+		"level.accessor.ClientLevelAccessor",
+		
+		"render.LevelRendererMixin",
+		
+		"player.LocalPlayerMixin",
+		"player.InventoryMixin",
+		"player.MultiPlayerGameModeMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1
