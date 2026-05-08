@@ -38,6 +38,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
 public class PacketMine extends LockingFeature implements PlayerTickListener, StartDestroyListener, ExtractLevelListener {
+	// Maximum distance at which destroying can occur
 	private Setting<Float> reach = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("reach")
 			.name("Reach")
@@ -45,7 +46,8 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.max(10)
 			.step(0.05F)
 			.build());
-	
+
+	// The percentage at which the client marks the destroying as complete
 	private Setting<Float> stopAt = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("stop_at")
 			.name("Stop at")
@@ -54,11 +56,13 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.step(0.05F)
 			.build());
 
+	// Rotates the player towards the block upon completion if enabled
 	private Setting<Boolean> rotate = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("rotate")
 			.name("Rotate")
 			.build());
 	
+	// The destroy percentage at which a rotation should occur
 	private Setting<Float> rotateAt = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("rotate_at")
 			.name("Rotate at")
@@ -67,7 +71,8 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.step(0.05F)
 			.requirement(() -> rotate.getValue())
 			.build());
-	
+
+	// The time after which a destroy is cancelled
 	private Setting<Float> timeout = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("timeout")
 			.name("Timeout")
@@ -75,13 +80,15 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.max(1000)
 			.step(10)
 			.build());
-	
+
+	// Swaps to the best tool for the targeted block if enabled
 	private Setting<Boolean> swap = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("swap")
 			.name("Swap")
 			.defaultValue(true)
 			.build());
-	
+
+	// The mode with which swapping should occur
 	private Setting<SwapMode> swapMode = addSetting(new EnumSetting.EnumSettingBuilder<SwapMode>()
 			.id("swap_mode")
 			.name("Swap mode")
@@ -89,8 +96,13 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.requirement(() -> swap.getValue())
 			.build());
 	
+	// The current block being destroyed
 	private Optional<DestroyBlock> destroyBlock;
+	
+	// The stack the player was holding before the initial swap
 	private Optional<ItemStack> oldStack;
+	
+	// Updates the current slot on the next tick
 	private boolean swapBack;
 	
 	public PacketMine() {
@@ -154,8 +166,11 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		
 		// Complete
 		if(block.getProgress() >= stopAt.getValue()) {
-			beginSwap(block, SwapMode.HOTBAR);
-			swapBack = true;
+			if(swap.getValue()) {
+				// Swapping back should always occur in hotbar mode because its more stable and (most) anticheats only flag the initial swap
+				beginSwap(block, SwapMode.HOTBAR);
+				swapBack = true;
+			}
 			block.stop();
 		}
 	}
