@@ -18,7 +18,9 @@ import net.kryos.lock.LockPrivilege;
 import net.kryos.mixin.level.accessor.ClientLevelAccessor;
 import net.kryos.setting.Setting;
 import net.kryos.setting.impl.BooleanSetting;
+import net.kryos.setting.impl.EnumSetting;
 import net.kryos.setting.impl.FloatSetting;
+import net.kryos.util.item.InventoryUtil;
 import net.kryos.util.level.BlockUtil;
 import net.kryos.util.math.RotationUtil;
 import net.kryos.util.render.ColorUtil;
@@ -30,6 +32,8 @@ import net.minecraft.core.Direction;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 
@@ -72,49 +76,22 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.step(10)
 			.build());
 	
-	private Setting<Boolean> crystal = addSetting(new BooleanSetting.BooleanSettingBuilder()
-			.id("crystal")
-			.name("Crystal")
-			.defaultValue(false)
-			.build());
-
-	private Setting<Float> crystalAt = addSetting(new FloatSetting.FloatSettingBuilder()
-			.id("crystal_at")
-			.name("Crystal at")
-			.min(0)
-			.max(2)
-			.step(0.05F)
-			.requirement(() -> crystal.getValue())
+	private Setting<Boolean> swap = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("swap")
+			.name("Swap")
+			.defaultValue(true)
 			.build());
 	
-	private Setting<Boolean> crystalIntercect = addSetting(new BooleanSetting.BooleanSettingBuilder()
-			.id("crystal_intercect")
-			.name("Crystal intercect")
-			.defaultValue(false)
-			.requirement(() -> crystal.getValue())
-			.build());
-
-	private Setting<Float> minTargetDamage = addSetting(new FloatSetting.FloatSettingBuilder()
-			.id("min_target_damage")
-			.name("Min target damage")
-			.min(0)
-			.max(100)
-			.step(1)
-			.defaultValue(5)
-			.requirement(() -> crystal.getValue())
-			.build());
-	
-	private Setting<Float> maxSelfDamage = addSetting(new FloatSetting.FloatSettingBuilder()
-			.id("max_self_damage")
-			.name("Max self damage")
-			.min(0)
-			.max(100)
-			.step(1)
-			.defaultValue(5)
-			.requirement(() -> crystal.getValue())
+	private Setting<SwapMode> swapMode = addSetting(new EnumSetting.EnumSettingBuilder<SwapMode>()
+			.id("swap_mode")
+			.name("Swap mode")
+			.defaultValue(SwapMode.HOTBAR)
+			.requirement(() -> swap.getValue())
 			.build());
 	
 	private Optional<DestroyBlock> destroyBlock;
+	private Optional<ItemStack> oldStack;
+	private boolean swapBack;
 	
 	public PacketMine() {
 		super("packet_mine", "PacketMine", FeatureCategory.WORLD, Optional.empty(), LockPrivilege.HIGH);
@@ -144,6 +121,14 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		DestroyBlock block = destroyBlock.get();
 		block.tick();
 		
+		// Swap back
+		if(swapBack && mc.level.getBlockState(block) != block.getState()) {
+			swapBack = false;
+			destroyBlock = Optional.empty();
+			completeSwap(SwapMode.HOTBAR);
+			return;
+		}
+		
 		// Timeout
 		if((mc.player.tickCount - block.getStart()) > timeout.getValue()) {
 			block.abort();
@@ -159,16 +144,19 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		}
 
 		// Rotate
-		if(rotate.getValue() && block.getProgress() >= rotateAt.getValue()) {
+		if(block.getProgress() >= rotateAt.getValue()) {
 			float[] rot = RotationUtil.getRotationsTo(block, block.getDir());
-			Kryos.rotationManager.rotate(rot[0], rot[1]);
+			
+			if(rotate.getValue())
+				Kryos.rotationManager.rotate(rot[0], rot[1]);
 		}
+		
 		
 		// Complete
 		if(block.getProgress() >= stopAt.getValue()) {
+			beginSwap(block, SwapMode.HOTBAR);
+			swapBack = true;
 			block.stop();
-			destroyBlock = Optional.empty();
-			return;
 		}
 	}
 	
@@ -183,7 +171,11 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		DestroyBlock block = new DestroyBlock(event.getPos(), event.getDirection());
 		
 		destroyBlock = Optional.of(block);
-		block.start();
+		
+		// Swap
+		ItemStack stack = beginSwap(block, swapMode.getValue());
+		block.start(stack);
+		completeSwap(swapMode.getValue());
 	}
 
 	@Override
@@ -211,8 +203,46 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		
 	}
 	
+	public ItemStack beginSwap(DestroyBlock block, SwapMode swapMode) {
+		ItemStack stack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+		
+		if(swap.getValue()) {
+			ItemStack oldStack = mc.player.getItemInHand(InteractionHand.MAIN_HAND);
+			stack = InventoryUtil.findFastestTool(block.getState(), block);
+			int slot = InventoryUtil.getSlotWithStack(stack);
+			
+			switch(swapMode) {
+				case HOTBAR:
+					InventoryUtil.slotUpdate(slot);
+					break;
+				case INVENTORY:
+					mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot + 36, mc.player.getInventory().getSelectedSlot(), ContainerInput.SWAP, mc.player);
+					this.oldStack = Optional.of(oldStack);
+					break;
+			}
+		}
+		
+		return stack;
+	}
+	
+	public void completeSwap(SwapMode swapMode) {
+		if(swap.getValue()) {
+			switch(swapMode) {
+				case HOTBAR:
+					InventoryUtil.slotUpdate(mc.player.getInventory().getSelectedSlot());
+					break;
+				case INVENTORY:
+					if(oldStack.isPresent()) {
+						mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, InventoryUtil.getSlotWithStack(oldStack.get()) + 36, mc.player.getInventory().getSelectedSlot(), ContainerInput.SWAP, mc.player);
+					}
+					break;
+			}
+		}
+	}
+	
 	public static class DestroyBlock extends BlockPos {
         private BlockStatePredictionHandler handler = ((ClientLevelAccessor) mc.level).getHandler();
+        private ItemStack stack;
 		private BlockState state;
 		private Direction dir;
 		
@@ -226,9 +256,10 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			this.state = mc.level.getBlockState(pos);
 		}
 		
-		public void start() {
+		public void start(ItemStack stack) {
             predict(Action.START_DESTROY_BLOCK);
             start = mc.player.tickCount;
+            this.stack = stack;
 		}
 		
 		public void stop() {
@@ -240,7 +271,7 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		}
 		
 		public void tick() {
-			progress = BlockUtil.getBreakDelta(mc.player.getItemInHand(InteractionHand.MAIN_HAND), state, this) * ((mc.player.tickCount - start) + 1);
+			progress = BlockUtil.getBreakDelta(stack, state, this) * ((mc.player.tickCount - start) + 1);
 		}
 		
 		public void predict(ServerboundPlayerActionPacket.Action action) {
@@ -276,5 +307,14 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		}
 	}
 	
-	record CrystalCandidate(BlockPos pos, float damage) {}
+	static enum SwapMode {
+		HOTBAR,
+		INVENTORY;
+	}
+	
+	static enum HotbarMode {
+		ABORT,
+		PREVENT,
+		IGNORE;
+	}
 }

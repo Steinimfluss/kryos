@@ -2,7 +2,9 @@ package net.kryos.setting.impl;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
+import net.kryos.setting.Requirement;
 import net.kryos.setting.Setting;
 
 public class EnumSetting<T extends Enum<?>> extends Setting<T> {
@@ -56,6 +58,7 @@ public class EnumSetting<T extends Enum<?>> extends Setting<T> {
         private String id;
         private String name;
         private T defaultValue;
+        private Optional<Requirement> requirement = Optional.empty();
 
         public EnumSettingBuilder<T> id(String id) {
             this.id = id;
@@ -71,8 +74,16 @@ public class EnumSetting<T extends Enum<?>> extends Setting<T> {
             this.defaultValue = defaultValue;
             return this;
         }
+        
+        public EnumSettingBuilder<T> requirement(Requirement requirement) {
+            this.requirement = Optional.of(requirement);
+            return this;
+        }
 
         public EnumSetting<T> build() {
+        	EnumSetting<T> enumSetting = new EnumSetting<T>(id, name, defaultValue);
+	    	if(requirement.isPresent())
+	    		enumSetting.requires(requirement.get());
             return new EnumSetting<>(id, name, defaultValue);
         }
     }

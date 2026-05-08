@@ -2,6 +2,7 @@ package net.kryos.util.item;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -28,7 +29,7 @@ public class InventoryUtil {
         return bestStack;
     }
 	
-	public static int getSlotFromStack(ItemStack stack) {
+	public static int getSlotWithStack(ItemStack stack) {
 		for (int i = 0; i < 9; i++) {
             ItemStack s = mc.player.getInventory().getItem(i);
             
@@ -41,5 +42,13 @@ public class InventoryUtil {
 	
 	public static boolean hasItemIn(Item item, InteractionHand hand) {
 		return mc.player.getItemInHand(hand) != null && mc.player.getItemInHand(hand).getItem() == item;
+	}
+	
+	public static boolean hasStackIn(ItemStack stack, InteractionHand hand) {
+		return mc.player.getItemInHand(hand) == stack;
+	}
+	
+	public static void slotUpdate(int slot) {
+		mc.getConnection().send(new ServerboundSetCarriedItemPacket(slot));
 	}
 }	
