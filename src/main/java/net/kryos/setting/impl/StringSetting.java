@@ -1,11 +1,12 @@
 package net.kryos.setting.impl;
 
 import net.kryos.setting.Setting;
+import net.minecraft.network.chat.Component;
 
 public class StringSetting extends Setting<String> {
 
-    private StringSetting(String id, String name, String defaultValue) {
-        super(id, name, defaultValue);
+    private StringSetting(String id, String name, String defaultValue, Component description) {
+        super(id, name, defaultValue, description);
     }
 
     @Override
@@ -22,6 +23,7 @@ public class StringSetting extends Setting<String> {
         private String id;
         private String name;
         private String defaultValue = "";
+        private Component description = Component.empty();
 
         public StringSettingBuilder id(String id) {
             this.id = id;
@@ -38,8 +40,13 @@ public class StringSetting extends Setting<String> {
             return this;
         }
 
+        public StringSettingBuilder description(Component description) {
+            this.description = description;
+            return this;
+        }
+
         public StringSetting build() {
-            return new StringSetting(id, name, defaultValue);
+            return new StringSetting(id, name, defaultValue, description);
         }
     }
 }

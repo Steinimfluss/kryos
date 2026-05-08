@@ -1,7 +1,5 @@
 package net.kryos.feature;
 
-import java.util.Optional;
-
 import org.jetbrains.annotations.NotNull;
 
 import net.kryos.lock.LockPrivilege;
@@ -14,7 +12,7 @@ public class LockingFeature extends Feature implements Locker {
 	private Setting<LockPrivilege> lockPrivilege;
 	
 	public LockingFeature(@NotNull String id, @NotNull String name, @NotNull FeatureCategory category,
-			Optional<Component> description, LockPrivilege privilege) {
+			Component description, LockPrivilege privilege) {
 		super(id, name, category, description);
 		
 		lockPrivilege = addSetting(new EnumSetting.EnumSettingBuilder<LockPrivilege>()

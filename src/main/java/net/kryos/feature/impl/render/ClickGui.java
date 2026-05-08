@@ -6,12 +6,13 @@ import org.lwjgl.glfw.GLFW;
 
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
+import net.minecraft.network.chat.Component;
 
 public class ClickGui extends Feature {
 	public net.kryos.gui.click.ClickGuiScreen clickGui;
 
 	public ClickGui() {
-		super("click_gui", "ClickGui", FeatureCategory.RENDER, Optional.empty());
+		super("click_gui", "ClickGui", FeatureCategory.RENDER, Component.literal("An interface for indexing different features"));
 		setKey(Optional.of(GLFW.GLFW_KEY_RIGHT_SHIFT));
 	}
 	

@@ -1,7 +1,6 @@
 package net.kryos.feature.impl.render;
 
 import java.util.List;
-import java.util.Optional;
 
 import net.kryos.Kryos;
 import net.kryos.event.impl.render.GuiExtractionEvent;
@@ -9,11 +8,12 @@ import net.kryos.event.listener.impl.render.GuiExtractionListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Component;
 
 public class FeatureList extends Feature implements GuiExtractionListener {
 	
 	public FeatureList() {
-		super("feature_list", "FeatureList", FeatureCategory.RENDER, Optional.empty());
+		super("feature_list", "FeatureList", FeatureCategory.RENDER, Component.literal("A HUD element for displaying which features are enabled"));
 	}
 	
 	@Override

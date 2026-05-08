@@ -29,6 +29,7 @@ import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.prediction.BlockStatePredictionHandler;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket.Action;
 import net.minecraft.world.InteractionHand;
@@ -106,7 +107,7 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 	private boolean swapBack;
 	
 	public PacketMine() {
-		super("packet_mine", "PacketMine", FeatureCategory.WORLD, Optional.empty(), LockPrivilege.HIGH);
+		super("packet_mine", "PacketMine", FeatureCategory.WORLD, Component.literal("Uses packets to mine blocks allowing for multi tasking while destroying"), LockPrivilege.HIGH);
 	}
 	
 	@Override

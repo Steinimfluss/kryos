@@ -24,6 +24,7 @@ import net.kryos.util.level.BlockUtil;
 import net.kryos.util.math.RotationUtil;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.Entity.RemovalReason;
@@ -36,39 +37,38 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 public class CrystalAura extends LockingFeature implements PlayerTickListener {
-	// Moves the position scan to a different thread if enabled
 	private Setting<Boolean> async = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("async")
 			.name("Async")
+			.description(Component.literal("Moves expensive computations onto a seperate thread for a performance improvement"))
 			.build());
 	
-	// Places crystals if enabled
 	private Setting<Boolean> place = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("place")
 			.name("Place")
+			.description(Component.literal("Places crystals"))
 			.build());
 
-	// The hand with which the crystal is placed
 	private Setting<InteractionHand> hand = addSetting(new EnumSetting.EnumSettingBuilder<InteractionHand>()
 			.id("hand")
 			.name("Hand")
 			.defaultValue(InteractionHand.OFF_HAND)
 			.requirement(() -> place.getValue())
+			.description(Component.literal("The hand with which the crystal is placed"))
 			.build());
 	
-	// Destroys crystals if enabled
 	private Setting<Boolean> destroy = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("destroy")
 			.name("Destroy")
+			.description(Component.literal("Destroys crystals"))
 			.build());
 	
-	// Removes attacked crystals earlier client side. Can cause desync on high ping but can also double crystal speed
 	private Setting<Boolean> earlyRemove = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("early_remove")
 			.name("Early remove")
+			.description(Component.literal("Removes attacked crystals earlier client side. Can cause desync on high ping but can also drastically improve crystal speed"))
 			.build());
 
-	// Maximum distance for placing/destroying actions
 	private Setting<Float> reach = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("reach")
 			.name("Reach")
@@ -76,21 +76,21 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.max(10)
 			.step(0.05F)
 			.requirement(() -> place.getValue() || destroy.getValue())
+			.description(Component.literal("Maximum distance for placing/destroying actions"))
 			.build());
 	
-	// Rotates for actions placing/destroying if enabled
 	private Setting<Boolean> rotate = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("rotate")
 			.name("Rotate")
+			.description(Component.literal("Rotates for actions"))
 			.build());
 
-	// Prevents crystals from killing the local player
 	private Setting<Boolean> antiSuicide = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("anti_suicide")
 			.name("Anti suicide")
+			.description(Component.literal("Prevents the player from being damaged too much or killed"))
 			.build());
 
-	// Minimum damage the local player has to remain with after an explosion
 	private Setting<Float> minSuicideHealth = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("min_suicide_health")
 			.name("Min health")
@@ -98,9 +98,9 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.max(20.0F)
 			.step(0.5F)
 			.requirement(() -> antiSuicide.getValue())
+			.description(Component.literal("Minimum damage the local player has to remain with after an explosion"))
 			.build());
 
-	// Maximum damage allowed to be dealt to the local player
 	private Setting<Float> maxSuicideDamage = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("max_suicide_damage")
 			.name("Max suicide damage")
@@ -108,9 +108,9 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.max(20.0F)
 			.step(0.5F)
 			.requirement(() -> antiSuicide.getValue())
+			.description(Component.literal("Maximum damage allowed to be dealt to the local player"))
 			.build());
 
-	// Minimum damage required for a place/break 
 	private Setting<Float> minDamage = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("min_damage")
 			.name("Min damage")
@@ -118,9 +118,9 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.max(20.0F)
 			.step(0.5F)
 			.requirement(() -> destroy.getValue())
+			.description(Component.literal("Minimum damage required for a place/break"))
 			.build());
 	
-	// The amount of crystals until death at which minimum damage is ignored
 	private Setting<Float> lethalMultiplier = addSetting(new FloatSetting.FloatSettingBuilder()
 			.id("lethal_multiplier")
 			.name("Lethal multiplier")
@@ -128,6 +128,23 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.max(20.0F)
 			.step(1F)
 			.requirement(() -> place.getValue() || destroy.getValue())
+			.description(Component.literal("The amount of crystals until target death at which minimum damage is ignored"))
+			.build());
+	
+	private Setting<Boolean> predict = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("predict")
+			.name("Predict")
+			.description(Component.literal("Uses movement predictions in order to determine a targets server side position"))
+			.build());
+	
+	private Setting<Float> predictAmount = addSetting(new FloatSetting.FloatSettingBuilder()
+			.id("predict_amount")
+			.name("Predict amount")
+			.min(1.0F)
+			.max(20.0F)
+			.step(1F)
+			.requirement(() -> predict.getValue())
+			.description(Component.literal("The amount of by which movements are predicted into the future"))
 			.build());
 	
 	private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -136,7 +153,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	private volatile boolean scanInProgress = false;
 	
 	public CrystalAura() {
-		super("crystal_aura", "Crystal Aura", FeatureCategory.COMBAT, Optional.empty(), LockPrivilege.HIGH);
+		super("crystal_aura", "Crystal Aura", FeatureCategory.COMBAT, Component.literal("Uses crystals to kill enemies"), LockPrivilege.HIGH);
 	}
 	
 	@Override
@@ -187,6 +204,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		    
 			float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
 			Kryos.rotationManager.rotate(rot[0], rot[1]);
+			return;
 		}
 		
 		// Place
@@ -259,7 +277,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 						
 						if(!(entity instanceof LivingEntity living)) continue;
 
-						float d = DamageUtil.getCrystalDamage(living, living.position(), above.getBottomCenter());
+						float d = DamageUtil.getCrystalDamage(living, getPosition(living), above.getBottomCenter());
 						
 						// Minimum damage. It gets ignore if the crystal count is lethal
 						boolean lethal = living.getHealth() - (d * lethalMultiplier.getValue()) <= 0f;
@@ -311,7 +329,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 
 	            if (!(target instanceof LivingEntity living)) continue;
 
-	            float d = DamageUtil.getCrystalDamage(living, living.position(), crystal.position());
+	            float d = DamageUtil.getCrystalDamage(living, getPosition(living), crystal.position());
 
 				// Minimum damage. It gets ignore if the crystal count is lethal
 	            boolean lethal = living.getHealth() - (d * lethalMultiplier.getValue()) <= 0f;
@@ -338,5 +356,22 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	    if (bestCrystal == null) return Optional.empty();
 
 	    return Optional.of(Map.entry(bestCrystal, bestDamage));
+	}
+
+	private Vec3 getPosition(Entity entity) {
+		Vec3 pos = entity.position();
+		
+		if(predict.getValue()) {
+			Vec3 vel = entity.getDeltaMovement();
+			float predict = predictAmount();
+			vel.multiply(new Vec3(predict, predict, predict));
+			pos.add(vel);
+		}
+		
+		return pos;
+	}
+	
+	private float predictAmount() {
+		return predict.getValue() ? predictAmount.getValue() : 0;
 	}
 }

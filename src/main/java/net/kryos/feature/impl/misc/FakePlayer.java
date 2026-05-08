@@ -1,6 +1,5 @@
 package net.kryos.feature.impl.misc;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import com.mojang.authlib.GameProfile;
@@ -15,6 +14,7 @@ import net.kryos.setting.Setting;
 import net.kryos.setting.impl.BooleanSetting;
 import net.kryos.setting.impl.StringSetting;
 import net.kryos.util.entity.FakePlayerEntity;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.Entity;
 
 public class FakePlayer extends Feature implements PlayerTickListener {
@@ -23,6 +23,7 @@ public class FakePlayer extends Feature implements PlayerTickListener {
 				.id("copy_inventory")
 				.name("Copy inventory")
 				.defaultValue(true)
+				.description(Component.literal("Copies the local players inventory"))
 				.build()
 			);
 	
@@ -39,11 +40,12 @@ public class FakePlayer extends Feature implements PlayerTickListener {
 				.id("name")
 				.name("Name")
 				.defaultValue("Fake Player")
+				.description(Component.literal("The username the fake player has"))
 				.build()
 			);
 	
 	public FakePlayer() {
-		super("fake_player", "Fake Player", FeatureCategory.MISC, Optional.empty());
+		super("fake_player", "Fake Player", FeatureCategory.MISC, Component.literal("A fake player for testing features on servers"));
 	}
 
 	private FakePlayerEntity fakePlayer;

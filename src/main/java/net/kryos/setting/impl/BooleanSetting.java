@@ -4,10 +4,11 @@ import java.util.Optional;
 
 import net.kryos.setting.Requirement;
 import net.kryos.setting.Setting;
+import net.minecraft.network.chat.Component;
 
 public class BooleanSetting extends Setting<Boolean> {
-    private BooleanSetting(String id, String name, boolean defaultValue) {
-        super(id, name, defaultValue);
+    private BooleanSetting(String id, String name, boolean defaultValue, Component description) {
+        super(id, name, defaultValue, description);
     }
 
     @Override
@@ -40,6 +41,7 @@ public class BooleanSetting extends Setting<Boolean> {
         private String name;
         private boolean defaultValue;
         private Optional<Requirement> requirement = Optional.empty();
+        private Component description = Component.empty();
 
         public BooleanSettingBuilder id(String id) {
             this.id = id;
@@ -48,6 +50,11 @@ public class BooleanSetting extends Setting<Boolean> {
 
         public BooleanSettingBuilder name(String name) {
             this.name = name;
+            return this;
+        }
+        
+        public BooleanSettingBuilder description(Component description) {
+            this.description = description;
             return this;
         }
 
@@ -62,7 +69,7 @@ public class BooleanSetting extends Setting<Boolean> {
         }
 
         public BooleanSetting build() {
-        	BooleanSetting booleanSetting = new BooleanSetting(id, name, defaultValue);
+        	BooleanSetting booleanSetting = new BooleanSetting(id, name, defaultValue, description);
 	    	if(requirement.isPresent())
 	    		booleanSetting.requires(requirement.get());
             return booleanSetting;

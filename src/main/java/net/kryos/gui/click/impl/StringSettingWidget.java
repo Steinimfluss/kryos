@@ -1,5 +1,6 @@
 package net.kryos.gui.click.impl;
 
+import net.kryos.Kryos;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.widget.Widget;
 import net.kryos.setting.impl.StringSetting;
@@ -25,6 +26,10 @@ public class StringSettingWidget extends Widget {
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
         if (!visible()) return;
+        
+		if(isHovered(mouseX, mouseY, x, y, width, HEIGHT)) {
+			Kryos.tooltipManager.setTooltip(setting.getDescription());
+		}
 
         graphics.text(font, setting.getName(),
                 x + 4,

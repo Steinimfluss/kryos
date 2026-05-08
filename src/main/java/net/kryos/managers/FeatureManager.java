@@ -1,4 +1,4 @@
-package net.kryos.feature;
+package net.kryos.managers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,6 +6,8 @@ import java.util.Optional;
 
 import net.kryos.event.impl.input.KeyPressEvent;
 import net.kryos.event.listener.impl.input.KeyPressListener;
+import net.kryos.feature.Feature;
+import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.impl.combat.CrystalAura;
 import net.kryos.feature.impl.misc.FakePlayer;
 import net.kryos.feature.impl.render.ClickGui;

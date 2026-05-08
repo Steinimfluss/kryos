@@ -2,6 +2,7 @@ package net.kryos.gui.click.impl;
 
 import org.lwjgl.glfw.GLFW;
 
+import net.kryos.Kryos;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.widget.Widget;
 import net.kryos.setting.impl.BooleanSetting;
@@ -22,6 +23,10 @@ public class BooleanSettingWidget extends Widget {
 	@Override
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {		
 		graphics.text(font, setting.getName(), x + 4, y + height / 2 - font.lineHeight / 2 + (isHovered(mouseX, mouseY) ? -1 : 0), MainTheme.TEXT.getRGB());
+
+		if(isHovered(mouseX, mouseY, x, y, width, HEIGHT)) {
+			Kryos.tooltipManager.setTooltip(setting.getDescription());
+		}
 		
 		String value = setting.getValueString();
 		graphics.text(font, value, x + width - font.width(value) - 4, y + height / 2 - font.lineHeight / 2, MainTheme.TEXT.getRGB());

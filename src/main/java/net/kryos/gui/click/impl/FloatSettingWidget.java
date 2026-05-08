@@ -2,6 +2,7 @@ package net.kryos.gui.click.impl;
 
 import org.lwjgl.glfw.GLFW;
 
+import net.kryos.Kryos;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.widget.Widget;
 import net.kryos.setting.impl.FloatSetting;
@@ -24,6 +25,10 @@ public class FloatSettingWidget extends Widget {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		updateDrag(mouseX);
 
+		if(isHovered(mouseX, mouseY, x, y, width, HEIGHT)) {
+			Kryos.tooltipManager.setTooltip(setting.getDescription());
+		}
+		
 		float min = setting.getMin();
 	    float max = setting.getMax();
 	    float value = setting.getValue();

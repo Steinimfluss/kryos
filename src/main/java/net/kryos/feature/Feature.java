@@ -17,7 +17,7 @@ public abstract class Feature {
 	
 	private String id;
 	private String name;
-	private Optional<Component> description;
+	private Component description;
 	private FeatureCategory category;
 	
 	private boolean enabled;
@@ -28,7 +28,7 @@ public abstract class Feature {
 	private Setting<Boolean> display;
 	private Setting<String> displayName;
 	
-	public Feature(@NotNull String id, @NotNull String name, @NotNull FeatureCategory category, Optional<Component> description) {
+	public Feature(@NotNull String id, @NotNull String name, @NotNull FeatureCategory category, Component description) {
 		if (id.isEmpty()) throw new IllegalArgumentException("id cannot be empty");
 		if (name.isEmpty()) throw new IllegalArgumentException("name cannot be empty");
 		 
@@ -122,7 +122,7 @@ public abstract class Feature {
 		return name;
 	}
 
-	public Optional<Component> getDescription() {
+	public Component getDescription() {
 		return description;
 	}
 	

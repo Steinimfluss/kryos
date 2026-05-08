@@ -10,9 +10,10 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.kryos.config.ConfigManager;
 import net.kryos.event.EventBus;
-import net.kryos.feature.FeatureManager;
-import net.kryos.lock.LockManager;
-import net.kryos.rotation.RotationManager;
+import net.kryos.managers.FeatureManager;
+import net.kryos.managers.LockManager;
+import net.kryos.managers.RotationManager;
+import net.kryos.managers.TooltipManager;
 import net.minecraft.resources.Identifier;
 
 public class Kryos implements ModInitializer {
@@ -25,6 +26,7 @@ public class Kryos implements ModInitializer {
     public static ConfigManager configManager;
     public static RotationManager rotationManager;
     public static LockManager lockManager;
+    public static TooltipManager tooltipManager;
 
     @Override
     public void onInitialize() {
@@ -35,6 +37,7 @@ public class Kryos implements ModInitializer {
         featureManager = new FeatureManager();
         lockManager = new LockManager();
         rotationManager = new RotationManager();
+        tooltipManager = new TooltipManager();
         
         eventBus.subscribe(featureManager);
         eventBus.subscribe(lockManager);

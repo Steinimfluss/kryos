@@ -1,4 +1,4 @@
-package net.kryos.lock;
+package net.kryos.managers;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,6 +6,7 @@ import java.util.List;
 import net.kryos.event.impl.player.PlayerTickEvent.Post;
 import net.kryos.event.impl.player.PlayerTickEvent.Pre;
 import net.kryos.event.listener.impl.player.PlayerTickListener;
+import net.kryos.lock.Locker;
 
 public class LockManager implements PlayerTickListener {
 	private final List<Locker> lockers = new ArrayList<>();

@@ -2,6 +2,7 @@ package net.kryos.gui.click.impl;
 
 import org.lwjgl.glfw.GLFW;
 
+import net.kryos.Kryos;
 import net.kryos.feature.Feature;
 import net.kryos.gui.MainTheme;
 import net.kryos.gui.widget.Widget;
@@ -35,6 +36,10 @@ public class FeatureWidget extends Widget {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		alignChildren();
 		updateSize();
+		
+		if(isHovered(mouseX, mouseY, x, y, width, BASE_HEIGHT)) {
+			Kryos.tooltipManager.setTooltip(feature.getDescription());
+		}
 		
 		// Tab
 		graphics.fill(x, y, x + width, y + height, MainTheme.PRIMARY.getRGB());

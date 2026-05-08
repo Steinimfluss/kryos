@@ -1,5 +1,7 @@
 package net.kryos.gui.click;
 
+import net.kryos.Kryos;
+import net.kryos.gui.MainTheme;
 import net.kryos.gui.click.impl.FeaturesWidget;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.Screen;
@@ -19,8 +21,17 @@ public class ClickGuiScreen extends Screen {
 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
+    	Kryos.tooltipManager.clearTooltip();
+    	
     	features.extractRenderState(graphics, mouseX, mouseY, delta);
         super.extractRenderState(graphics, mouseX, mouseY, delta);
+        
+        Component tooltip = Kryos.tooltipManager.getTooltip();
+        
+        if(!tooltip.getString().isEmpty()) {
+	        graphics.fill(mouseX + 6, mouseY + 6, mouseX + font.width(tooltip) + 8, mouseY + font.lineHeight + 8, MainTheme.PRIMARY.getRGB());
+	    	graphics.text(font, tooltip, mouseX + 7, mouseY + 7, -1);
+        }
     }
 
     @Override

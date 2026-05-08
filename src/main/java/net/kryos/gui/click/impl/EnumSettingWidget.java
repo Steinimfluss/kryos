@@ -2,6 +2,7 @@ package net.kryos.gui.click.impl;
 
 import org.lwjgl.glfw.GLFW;
 
+import net.kryos.Kryos;
 import net.kryos.gui.widget.Widget;
 import net.kryos.setting.impl.EnumSetting;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -22,6 +23,10 @@ public class EnumSettingWidget extends Widget {
 	public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float a) {
 		graphics.text(font, setting.getName(), x + 4, y + height / 2 - font.lineHeight / 2 + (isHovered(mouseX, mouseY) ? -1 : 0), -1);
 		graphics.text(font, setting.getValue().name(), x + width - font.width(setting.getValue().name()) - 4, y + height / 2 - font.lineHeight / 2, -1);
+		
+		if(isHovered(mouseX, mouseY, x, y, width, HEIGHT)) {
+			Kryos.tooltipManager.setTooltip(setting.getDescription());
+		}
 		
 		super.extractRenderState(graphics, mouseX, mouseY, a);
 	}

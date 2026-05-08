@@ -2,21 +2,25 @@ package net.kryos.setting;
 
 import java.util.Optional;
 
+import net.minecraft.network.chat.Component;
+
 public abstract class Setting<T> {
 	private Optional<Requirement> requirement;
 	
 	private String id;
 	private String name;
+	private Component description = Component.empty();
 	
 	private T value;
 	private T defaultValue;
 	
-	public Setting(String id, String name, T defaultValue) {
+	public Setting(String id, String name, T defaultValue, Component description) {
 		this.id = id;
 		this.name = name;
 		this.defaultValue = defaultValue;
 		this.value = defaultValue;
 		this.requirement = Optional.empty();
+		this.description = description;
 	}
 	
 	public void requires(Requirement requirement) {
@@ -75,5 +79,21 @@ public abstract class Setting<T> {
 
 	public void setDefaultValue(T defaultValue) {
 		this.defaultValue = defaultValue;
+	}
+
+	public Optional<Requirement> getRequirement() {
+		return requirement;
+	}
+
+	public void setRequirement(Optional<Requirement> requirement) {
+		this.requirement = requirement;
+	}
+
+	public Component getDescription() {
+		return description;
+	}
+
+	public void setDescription(Component description) {
+		this.description = description;
 	}
 }

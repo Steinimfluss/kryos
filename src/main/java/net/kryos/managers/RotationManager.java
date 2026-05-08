@@ -1,4 +1,4 @@
-package net.kryos.rotation;
+package net.kryos.managers;
 
 import net.kryos.event.impl.player.SendPositionEvent;
 import net.kryos.event.impl.player.PlayerTickEvent.Post;
