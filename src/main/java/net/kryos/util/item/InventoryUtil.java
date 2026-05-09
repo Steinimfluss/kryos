@@ -1,9 +1,12 @@
 package net.kryos.util.item;
 
+import java.util.Optional;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.BlockState;
@@ -29,15 +32,26 @@ public class InventoryUtil {
         return bestStack;
     }
 	
-	public static int getSlotWithStack(ItemStack stack) {
+	public static Optional<Integer> getSlotWithStack(ItemStack stack) {
 		for (int i = 0; i < 9; i++) {
             ItemStack s = mc.player.getInventory().getItem(i);
             
             if(stack == s) {
-            	return i;
+            	return Optional.of(i);
             }
         }
-		return -1;
+		return Optional.empty();
+	}
+	
+	public static Optional<Integer> getSlotWithItem(Item item) {
+		for (int i = 0; i < Inventory.INVENTORY_SIZE; i++) {
+            ItemStack s = mc.player.getInventory().getItem(i);
+            
+            if(s.getItem() == item) {
+            	return Optional.of(i);
+            }
+        }
+		return Optional.empty();
 	}
 	
 	public static boolean hasItemIn(Item item, InteractionHand hand) {

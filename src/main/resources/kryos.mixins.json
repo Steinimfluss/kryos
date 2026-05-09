@@ -14,7 +14,10 @@
 		
 		"player.LocalPlayerMixin",
 		"player.InventoryMixin",
-		"player.MultiPlayerGameModeMixin"
+		"player.MultiPlayerGameModeMixin",
+		
+		"network.ClientPacketListenerMixin",
+		"network.accessor.ClientboundSetEntityMotionPacketAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

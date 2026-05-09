@@ -9,6 +9,8 @@ import net.kryos.event.listener.impl.input.KeyPressListener;
 import net.kryos.feature.Feature;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.impl.combat.CrystalAura;
+import net.kryos.feature.impl.combat.Offhand;
+import net.kryos.feature.impl.combat.Velocity;
 import net.kryos.feature.impl.misc.FakePlayer;
 import net.kryos.feature.impl.render.ClickGui;
 import net.kryos.feature.impl.render.FeatureList;
@@ -24,6 +26,8 @@ public class FeatureManager implements KeyPressListener {
     public FakePlayer fakePlayer = register(new FakePlayer());
     public PacketMine packetMine = register(new PacketMine());
     public CrystalAura crystalAura = register(new CrystalAura());
+    public Offhand offhand = register(new Offhand());
+    public Velocity velocity = register(new Velocity());
     
     private <T extends Feature> T register(T feature) {
         features.add(feature);

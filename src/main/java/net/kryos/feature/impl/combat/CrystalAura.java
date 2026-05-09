@@ -158,6 +158,8 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	
 	@Override
 	protected void onEnable() {
+		placePos = Optional.empty();
+		destroyEntity = Optional.empty();
 		Kryos.eventBus.subscribe(this);
 		super.onEnable();
 	}
@@ -165,11 +167,13 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	@Override
 	protected void onDisable() {
 		Kryos.eventBus.unsubscribe(this);
+    	Kryos.lockManager.free(this);
 		super.onDisable();
 	}
 
 	@Override
 	public void onPre(Pre event) {
+		Kryos.lockManager.free(this);
 		if(async.getValue()) {
 			// Asynchronous
 		    if (!scanInProgress) {
@@ -178,7 +182,6 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		        executor.submit(() -> {
 		            try {
 		                placePos = getPlace();
-		                destroyEntity = getDestroy();
 		            } finally {
 		                scanInProgress = false;
 		            }
@@ -188,11 +191,12 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			// Synchronized
             placePos = getPlace();
 		}
-		
+
         destroyEntity = getDestroy();
         
 		// Destroy
 		if (destroy.getValue() && destroyEntity.isPresent()) {
+			if(!Kryos.lockManager.acquire(this)) return;
 		    var destroy = destroyEntity.get();
 		    mc.gameMode.attack(mc.player, destroy.getKey());
 		    mc.player.swing(InteractionHand.MAIN_HAND);
@@ -201,7 +205,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		    if(earlyRemove.getValue()) {
 		    	mc.level.removeEntity(destroy.getKey().getId(), RemovalReason.KILLED);
 		    }
-		    
+
 			float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
 			Kryos.rotationManager.rotate(rot[0], rot[1]);
 			return;
@@ -209,6 +213,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		
 		// Place
 		if (place.getValue() && placePos.isPresent()) {
+			if(!Kryos.lockManager.acquire(this)) return;
 		    var place = placePos.get();
 			InteractionHand hand = this.hand.getValue();
 			
