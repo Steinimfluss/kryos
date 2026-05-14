@@ -20,8 +20,12 @@ public class RotationManager implements PlayerTickListener, SendRotationListener
 	private float serverYaw;
 	private float serverPitch;
 	
+	private int count;
+	
 	@Override
 	public void onPre(Pre event) {
+		count = 0;
+		
 		lastRotating = rotating;
 		rotating = false;
 	}
@@ -58,6 +62,14 @@ public class RotationManager implements PlayerTickListener, SendRotationListener
 	public void rotateAvatar(RotateAvatarEvent event) {
 		if(event.getState().id == mc.player.getId() && (rotating || lastRotating))
 			event.getState().xRot = pitch;
+	}
+	
+	public int getCount() {
+		return count;
+	}
+	
+	public boolean hasRotated() {
+		return count > 0;
 	}
 
 	public float getYaw() {

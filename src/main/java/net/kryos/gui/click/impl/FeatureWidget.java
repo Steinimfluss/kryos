@@ -88,7 +88,10 @@ public class FeatureWidget extends Widget {
 		if(super.keyPressed(event)) return true;
 		
 		if(binding) {
-			feature.setKey(Optional.of(event.input()));
+			if(event.input() == GLFW.GLFW_KEY_ESCAPE)
+				feature.setKey(Optional.empty());
+			else
+				feature.setKey(Optional.of(event.input()));
 			binding = false;
 			return true;
 		}

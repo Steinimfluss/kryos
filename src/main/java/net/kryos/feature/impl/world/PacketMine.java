@@ -134,13 +134,10 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 			.build());
 	
 	// The current block being destroyed
-	private Optional<DestroyBlock> destroyBlock;
+	private Optional<DestroyBlock> destroyBlock = Optional.empty();
 	
 	// The stack the player was holding before the initial swap
-	private Optional<ItemStack> oldStack;
-	
-	// Updates the current slot on the next tick
-	private boolean swapBack;
+	private Optional<ItemStack> oldStack = Optional.empty();
 	
 	public PacketMine() {
 		super("packet_mine", "PacketMine", FeatureCategory.WORLD, Component.literal("Uses packets to mine blocks allowing for multi tasking while destroying"), LockPrivilege.HIGH);
@@ -166,19 +163,12 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 	@Override
 	public void onPre(Pre event) {
 		Kryos.lockManager.free(this);
+
 		if(destroyBlock.isEmpty())
 			return;
 		
 		DestroyBlock block = destroyBlock.get();
 		block.tick();
-		
-		// Swap back
-		if(swapBack && mc.level.getBlockState(block) != block.getState()) {
-			swapBack = false;
-			destroyBlock = Optional.empty();
-			completeSwap(SwapMode.HOTBAR);
-			return;
-		}
 		
 		// Timeout
 		if((mc.player.tickCount - block.getStart()) > timeout.getValue()) {
@@ -195,8 +185,11 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		}
 		
 		//Crystal
-		if(block.getProgress() >= crystalAt.getValue()) {
-			if(!Kryos.lockManager.acquire(this)) return;
+		if(crystal.getValue() && block.getProgress() >= crystalAt.getValue()) {
+			if(!Kryos.lockManager.acquire(this)) {
+				block.abort();
+				return;
+			}
 			
 			float[] rot = RotationUtil.getRotationsTo(block, Direction.UP);
 
@@ -223,7 +216,11 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		if(block.getProgress() >= rotateAt.getValue()) {
 			float[] rot = RotationUtil.getRotationsTo(block, block.getDir());
 
-			if(!Kryos.lockManager.acquire(this)) return;
+			if(!Kryos.lockManager.acquire(this)) {
+				block.abort();
+				destroyBlock = Optional.empty();
+				return;
+			}
 			
 			if(rotate.getValue())
 				Kryos.rotationManager.rotate(rot[0], rot[1]);
@@ -232,11 +229,13 @@ public class PacketMine extends LockingFeature implements PlayerTickListener, St
 		// Complete
 		if(block.getProgress() >= stopAt.getValue()) {
 			if(swap.getValue()) {
-				// Swapping back should always occur in hotbar mode because its more stable and (most) anticheats only flag the initial swap
-				beginSwap(block, SwapMode.HOTBAR);
-				swapBack = true;
+				beginSwap(block, SwapMode.INVENTORY);
+				block.stop();
+			} else {
+				block.stop();
 			}
-			block.stop();
+			
+			destroyBlock = Optional.empty();
 		}
 	}
 	

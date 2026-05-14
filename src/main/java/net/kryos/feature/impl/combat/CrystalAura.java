@@ -5,9 +5,16 @@ import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import it.unimi.dsi.fastutil.ints.Int2LongMap;
+import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
+import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kryos.Kryos;
+import net.kryos.event.impl.entity.RemoveEntityEvent;
+import net.kryos.event.impl.entity.SpawnEntityEvent;
 import net.kryos.event.impl.player.PlayerTickEvent.Post;
 import net.kryos.event.impl.player.PlayerTickEvent.Pre;
+import net.kryos.event.listener.impl.entity.RemoveEntityListener;
+import net.kryos.event.listener.impl.entity.SpawnEntityListener;
 import net.kryos.event.listener.impl.player.PlayerTickListener;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.LockingFeature;
@@ -22,6 +29,7 @@ import net.kryos.util.entity.EntityUtil;
 import net.kryos.util.item.InventoryUtil;
 import net.kryos.util.level.BlockUtil;
 import net.kryos.util.math.RotationUtil;
+import net.kryos.util.math.Timer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -36,11 +44,17 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class CrystalAura extends LockingFeature implements PlayerTickListener {
+public class CrystalAura extends LockingFeature implements PlayerTickListener, SpawnEntityListener, RemoveEntityListener {
 	private Setting<Boolean> async = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("async")
 			.name("Async")
 			.description(Component.literal("Moves expensive computations onto a seperate thread for a performance improvement"))
+			.build());
+	
+	private Setting<Boolean> precalc = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("precalc")
+			.name("Pre calc")
+			.description(Component.literal("Calculates positions for the next tick. Works great with early removal"))
 			.build());
 	
 	private Setting<Boolean> place = addSetting(new BooleanSetting.BooleanSettingBuilder()
@@ -63,6 +77,25 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.description(Component.literal("Destroys crystals"))
 			.build());
 	
+	private Setting<Boolean> destroyBlacklist = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("destroy_blacklist")
+			.name("Destroy blacklist")
+			.defaultValue(true)
+			.description(Component.literal("Prevents crystals from being attacked multiple times"))
+			.requirement(() -> destroy.getValue())
+			.build());
+	
+	private Setting<Float> destroyBlacklistTimeout = addSetting(new FloatSetting.FloatSettingBuilder()
+			.id("destory_blacklist_timeout")
+			.name("Destroy blacklist timeout")
+			.min(10)
+			.max(1000)
+			.step(10)
+			.defaultValue(500)
+			.requirement(() -> destroy.getValue())
+			.description(Component.literal("The time after which items are removed from the blacklist"))
+			.build());
+	
 	private Setting<Boolean> earlyRemove = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("early_remove")
 			.name("Early remove")
@@ -77,6 +110,16 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 			.step(0.05F)
 			.requirement(() -> place.getValue() || destroy.getValue())
 			.description(Component.literal("Maximum distance for placing/destroying actions"))
+			.build());
+	
+	private Setting<Float> destroyDelay = addSetting(new FloatSetting.FloatSettingBuilder()
+			.id("destroy_delay")
+			.name("Destroy delay")
+			.min(10)
+			.max(1000)
+			.step(10)
+			.requirement(() -> place.getValue() || destroy.getValue())
+			.description(Component.literal("Delay for destroying actions"))
 			.build());
 	
 	private Setting<Boolean> rotate = addSetting(new BooleanSetting.BooleanSettingBuilder()
@@ -152,8 +195,14 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	private volatile Optional<Map.Entry<EndCrystal, Float>> destroyEntity = Optional.empty();
 	private volatile boolean scanInProgress = false;
 	
+	private Int2LongMap destroyed = new Int2LongOpenHashMap();
+	
+	private Timer timer = new Timer();
+	
+	private BlockPos pos;
+	
 	public CrystalAura() {
-		super("crystal_aura", "Crystal Aura", FeatureCategory.COMBAT, Component.literal("Uses crystals to kill enemies"), LockPrivilege.HIGH);
+		super("crystal_aura", "Crystal Aura", FeatureCategory.COMBAT, Component.literal("Uses crystals to kill enemies"), LockPrivilege.LOW);
 	}
 	
 	@Override
@@ -168,13 +217,34 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	protected void onDisable() {
 		Kryos.eventBus.unsubscribe(this);
     	Kryos.lockManager.free(this);
+		pos = null;
+		
 		super.onDisable();
 	}
 
 	@Override
 	public void onPre(Pre event) {
 		Kryos.lockManager.free(this);
-		if(async.getValue()) {
+		pos = null;
+
+		calc();
+
+		if(destroy()) return;
+		
+		if(place()) return;
+	}
+
+	@Override
+	public void spawn(SpawnEntityEvent event) {
+        destroyEntity = getDestroy();
+
+        destroy();
+	}
+
+	@Override
+	public void remove(RemoveEntityEvent event) {
+		// Calculate for the next tick
+		if(precalc.getValue() && async.getValue()) {
 			// Asynchronous
 		    if (!scanInProgress) {
 		        scanInProgress = true;
@@ -182,22 +252,47 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		        executor.submit(() -> {
 		            try {
 		                placePos = getPlace();
+		                place();
 		            } finally {
 		                scanInProgress = false;
 		            }
 		        });
 		    }
-		} else {
-			// Synchronized
-            placePos = getPlace();
+		}
+	}
+	
+	public boolean destroy() {
+		if(!timer.check(destroyDelay.getValue().longValue())) return false;
+		
+		timer.reset();
+		
+		long now = System.currentTimeMillis();
+		long timeout = destroyBlacklistTimeout.getValue().longValue();
+
+		IntArrayList toRemove = new IntArrayList();
+
+		destroyed.forEach((id, time) -> {
+		    if (now - time >= timeout) {
+		        toRemove.add(id);
+		    }
+		});
+
+		for (int id : toRemove) {
+		    destroyed.remove(id);
 		}
 
-        destroyEntity = getDestroy();
-        
-		// Destroy
 		if (destroy.getValue() && destroyEntity.isPresent()) {
-			if(!Kryos.lockManager.acquire(this)) return;
+			if(!Kryos.lockManager.acquire(this)) return false;
+			
 		    var destroy = destroyEntity.get();
+		    
+		    if(destroyBlacklist.getValue() && destroyed.containsKey(destroy.getKey().getId())) {
+		    	System.out.println("Dupe");
+		    	return false;
+		    }
+		    
+		    destroyed.put(destroy.getKey().getId(), System.currentTimeMillis());
+		    
 		    mc.gameMode.attack(mc.player, destroy.getKey());
 		    mc.player.swing(InteractionHand.MAIN_HAND);
 		    
@@ -205,20 +300,32 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 		    if(earlyRemove.getValue()) {
 		    	mc.level.removeEntity(destroy.getKey().getId(), RemovalReason.KILLED);
 		    }
+		    
+		    if(pos != null && pos.equals(destroy.getKey().blockPosition())) return false;
 
-			float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
-			Kryos.rotationManager.rotate(rot[0], rot[1]);
-			return;
+		    if(rotate.getValue()) {
+				float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
+				Kryos.rotationManager.rotate(rot[0], rot[1]);
+				pos = destroy.getKey().blockPosition();
+		    }
+		    
+			return true;
 		}
 		
-		// Place
+		return false;
+	}
+
+	public boolean place() {
 		if (place.getValue() && placePos.isPresent()) {
-			if(!Kryos.lockManager.acquire(this)) return;
+			if(!Kryos.lockManager.acquire(this)) return false;
 		    var place = placePos.get();
+		    
 			InteractionHand hand = this.hand.getValue();
 			
 			if(!InventoryUtil.hasItemIn(Items.END_CRYSTAL, hand))
-				return;
+				return false;
+			
+			if(destroyBlacklist.getValue() && pos != null && pos.equals(place.getKey())) return false;
 			
 			if(rotate.getValue()) {
 				float[] rot = RotationUtil.getRotationsTo(place.getKey(), Direction.UP);
@@ -236,13 +343,35 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	                )
 	        );
 		    mc.player.swing(hand);
+		    
+		    pos = place.getKey();
+		    
+		    return true;
 	    }
-	}
-
-
-	@Override
-	public void onPost(Post event) {
 		
+		return false;
+	}
+	
+	private void calc() {
+		if(async.getValue()) {
+			// Asynchronous
+		    if (!scanInProgress) {
+		        scanInProgress = true;
+	
+		        executor.submit(() -> {
+		            try {
+		                placePos = getPlace();
+		            } finally {
+		                scanInProgress = false;
+		            }
+		        });
+		    }
+		} else {
+			// Synchronized
+            placePos = getPlace();
+		}
+		
+        destroyEntity = getDestroy();
 	}
 	
 	private Optional<Map.Entry<BlockPos, Float>> getPlace() {
@@ -378,5 +507,15 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener {
 	
 	private float predictAmount() {
 		return predict.getValue() ? predictAmount.getValue() : 0;
+	}
+
+	@Override
+	public void onPost(Post event) {
+		
+	}
+	
+	static enum Action {
+		PLACE,
+		DESTROY;
 	}
 }
