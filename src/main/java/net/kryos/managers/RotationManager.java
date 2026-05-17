@@ -26,8 +26,6 @@ public class RotationManager implements PlayerTickListener, SendRotationListener
 	public void onPre(Pre event) {
 		count = 0;
 		
-		lastRotating = rotating;
-		rotating = false;
 	}
 
 	@Override
@@ -36,18 +34,26 @@ public class RotationManager implements PlayerTickListener, SendRotationListener
 			mc.player.setYHeadRot(yaw);
 			mc.player.setYBodyRot(yaw);
 		}
+		lastRotating = rotating;
+		rotating = false;
 	}
 	
 	public void rotate(float yaw, float pitch) {
+		mc.player.setYHeadRot(yaw);
+		mc.player.setYBodyRot(yaw);
+		
 	    this.yaw = yaw;
 	    this.pitch = pitch;
 
 	    rotating = true;
+	    
+	    count++;
 	}
 
 	@Override
 	public void sendRotation(SendPositionEvent event) {
 		lastRotating = rotating;
+		System.out.println(rotating);
 		if(rotating) {
 			event.setYaw(yaw);
 			event.setPitch(pitch);

@@ -2,8 +2,10 @@ package net.kryos.feature.impl.combat;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 
 import it.unimi.dsi.fastutil.ints.Int2LongMap;
 import it.unimi.dsi.fastutil.ints.Int2LongOpenHashMap;
@@ -11,10 +13,12 @@ import it.unimi.dsi.fastutil.ints.IntArrayList;
 import net.kryos.Kryos;
 import net.kryos.event.impl.entity.RemoveEntityEvent;
 import net.kryos.event.impl.entity.SpawnEntityEvent;
+import net.kryos.event.impl.level.UpdateBlockEvent;
 import net.kryos.event.impl.player.PlayerTickEvent.Post;
 import net.kryos.event.impl.player.PlayerTickEvent.Pre;
 import net.kryos.event.listener.impl.entity.RemoveEntityListener;
 import net.kryos.event.listener.impl.entity.SpawnEntityListener;
+import net.kryos.event.listener.impl.level.UpdateBlockListener;
 import net.kryos.event.listener.impl.player.PlayerTickListener;
 import net.kryos.feature.FeatureCategory;
 import net.kryos.feature.LockingFeature;
@@ -29,13 +33,11 @@ import net.kryos.util.entity.EntityUtil;
 import net.kryos.util.item.InventoryUtil;
 import net.kryos.util.level.BlockUtil;
 import net.kryos.util.math.RotationUtil;
-import net.kryos.util.math.Timer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.Entity.RemovalReason;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.item.Items;
@@ -44,17 +46,51 @@ import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
-public class CrystalAura extends LockingFeature implements PlayerTickListener, SpawnEntityListener, RemoveEntityListener {
+public class CrystalAura extends LockingFeature implements PlayerTickListener, SpawnEntityListener, RemoveEntityListener, UpdateBlockListener {
+	// One action is still allowed per tick but it can occur anywhere in between. Even earlier
 	private Setting<Boolean> async = addSetting(new BooleanSetting.BooleanSettingBuilder()
 			.id("async")
 			.name("Async")
 			.description(Component.literal("Moves expensive computations onto a seperate thread for a performance improvement"))
 			.build());
+
+	private Setting<Boolean> tickThread = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("tick_thread")
+			.name("Tick thread")
+			.description(Component.literal("Spawns a thread when a tick occurs"))
+			.requirement(() -> async.getValue())
+			.build());
+
+	private Setting<Boolean> spawnThread = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("spawn_thread")
+			.name("Spawn thread")
+			.description(Component.literal("Spawns a thread when an entity is spawned"))
+			.requirement(() -> async.getValue())
+			.build());
 	
-	private Setting<Boolean> precalc = addSetting(new BooleanSetting.BooleanSettingBuilder()
-			.id("precalc")
-			.name("Pre calc")
-			.description(Component.literal("Calculates positions for the next tick. Works great with early removal"))
+	private Setting<Boolean> removeThread = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("remove_thread")
+			.name("Remove thread")
+			.description(Component.literal("Spawns a thread when an entity is removed"))
+			.requirement(() -> async.getValue())
+			.build());
+	
+	private Setting<Boolean> updateThread = addSetting(new BooleanSetting.BooleanSettingBuilder()
+			.id("update_thread")
+			.name("Update thread")
+			.description(Component.literal("Spawns a thread when a block is updated"))
+			.requirement(() -> async.getValue())
+			.build());
+
+	private Setting<Float> poolSize = addSetting(new FloatSetting.FloatSettingBuilder()
+			.id("pool_size")
+			.name("Pool size")
+			.description(Component.literal("The pool size of the thread executor. Feature must be reenabled to apply"))
+			.min(2)
+			.max(10)
+			.step(1)
+			.defaultValue(5)
+			.requirement(() -> async.getValue())
 			.build());
 	
 	private Setting<Boolean> place = addSetting(new BooleanSetting.BooleanSettingBuilder()
@@ -93,13 +129,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 			.step(10)
 			.defaultValue(500)
 			.requirement(() -> destroy.getValue())
-			.description(Component.literal("The time after which items are removed from the blacklist"))
-			.build());
-	
-	private Setting<Boolean> earlyRemove = addSetting(new BooleanSetting.BooleanSettingBuilder()
-			.id("early_remove")
-			.name("Early remove")
-			.description(Component.literal("Removes attacked crystals earlier client side. Can cause desync on high ping but can also drastically improve crystal speed"))
+			.description(Component.literal("The time after which items are removed from the destroy blacklist"))
 			.build());
 
 	private Setting<Float> reach = addSetting(new FloatSetting.FloatSettingBuilder()
@@ -110,16 +140,6 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 			.step(0.05F)
 			.requirement(() -> place.getValue() || destroy.getValue())
 			.description(Component.literal("Maximum distance for placing/destroying actions"))
-			.build());
-	
-	private Setting<Float> destroyDelay = addSetting(new FloatSetting.FloatSettingBuilder()
-			.id("destroy_delay")
-			.name("Destroy delay")
-			.min(10)
-			.max(1000)
-			.step(10)
-			.requirement(() -> place.getValue() || destroy.getValue())
-			.description(Component.literal("Delay for destroying actions"))
 			.build());
 	
 	private Setting<Boolean> rotate = addSetting(new BooleanSetting.BooleanSettingBuilder()
@@ -160,7 +180,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 			.min(1.0F)
 			.max(20.0F)
 			.step(0.5F)
-			.requirement(() -> destroy.getValue())
+			.requirement(() -> (destroy.getValue() || place.getValue()))
 			.description(Component.literal("Minimum damage required for a place/break"))
 			.build());
 	
@@ -174,32 +194,15 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 			.description(Component.literal("The amount of crystals until target death at which minimum damage is ignored"))
 			.build());
 	
-	private Setting<Boolean> predict = addSetting(new BooleanSetting.BooleanSettingBuilder()
-			.id("predict")
-			.name("Predict")
-			.description(Component.literal("Uses movement predictions in order to determine a targets server side position"))
-			.build());
-	
-	private Setting<Float> predictAmount = addSetting(new FloatSetting.FloatSettingBuilder()
-			.id("predict_amount")
-			.name("Predict amount")
-			.min(1.0F)
-			.max(20.0F)
-			.step(1F)
-			.requirement(() -> predict.getValue())
-			.description(Component.literal("The amount of by which movements are predicted into the future"))
-			.build());
-	
-	private final ExecutorService executor = Executors.newSingleThreadExecutor();
+	private ExecutorService executor;
+
 	private volatile Optional<Map.Entry<BlockPos, Float>> placePos = Optional.empty();
 	private volatile Optional<Map.Entry<EndCrystal, Float>> destroyEntity = Optional.empty();
-	private volatile boolean scanInProgress = false;
 	
 	private Int2LongMap destroyed = new Int2LongOpenHashMap();
 	
-	private Timer timer = new Timer();
-	
-	private BlockPos pos;
+	private Optional<BlockPos> pos;
+	private boolean acted; // One action per tick
 	
 	public CrystalAura() {
 		super("crystal_aura", "Crystal Aura", FeatureCategory.COMBAT, Component.literal("Uses crystals to kill enemies"), LockPrivilege.LOW);
@@ -210,6 +213,19 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 		placePos = Optional.empty();
 		destroyEntity = Optional.empty();
 		Kryos.eventBus.subscribe(this);
+		
+		int poolSize = this.poolSize.getValue().intValue();
+		
+		executor = new ThreadPoolExecutor(
+				poolSize,
+				poolSize,
+		        50, TimeUnit.MILLISECONDS, // Discard after one tick
+		        new ArrayBlockingQueue<>(poolSize),
+		        new ThreadPoolExecutor.DiscardOldestPolicy()
+		    );
+		
+		acted = false;
+		
 		super.onEnable();
 	}
 	
@@ -225,46 +241,62 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 	@Override
 	public void onPre(Pre event) {
 		Kryos.lockManager.free(this);
-		pos = null;
+		pos = Optional.empty();
 
-		calc();
-
-		if(destroy()) return;
-		
-		if(place()) return;
+		if (!async.getValue()) {
+			if(Kryos.rotationManager.hasRotated()) return;
+			
+			destroyEntity = getDestroy();
+		    if (destroy()) return;
+		    
+			placePos = getPlace();
+		    if (place()) return;
+		}
 	}
 
 	@Override
 	public void spawn(SpawnEntityEvent event) {
-        destroyEntity = getDestroy();
+		if(async.getValue() && spawnThread.getValue()) {
+			if(!(event.getEntity() instanceof EndCrystal crystal)) return;
 
-        destroy();
+			if(crystal.distanceTo(mc.player) > 32) return;
+			
+			asyncDestroy();
+		}
 	}
 
 	@Override
 	public void remove(RemoveEntityEvent event) {
-		// Calculate for the next tick
-		if(precalc.getValue() && async.getValue()) {
-			// Asynchronous
-		    if (!scanInProgress) {
-		        scanInProgress = true;
-	
-		        executor.submit(() -> {
-		            try {
-		                placePos = getPlace();
-		                place();
-		            } finally {
-		                scanInProgress = false;
-		            }
-		        });
-		    }
+		if(async.getValue() && removeThread.getValue()) {
+			Entity entity = mc.level.getEntity(event.getId());
+			
+			if(!(entity instanceof EndCrystal crystal)) return;
+			
+			if(crystal.distanceTo(mc.player) > 32) return;
+			
+			asyncPlace();
+		}
+	}
+
+	@Override
+	public void update(UpdateBlockEvent event) {
+		if(async.getValue() && updateThread.getValue()) {
+			if(event.getPos().distToCenterSqr(mc.player.position()) > 32) return;
+			
+			BlockPos below = event.getPos().below();
+			Block belowBlock = mc.level.getBlockState(below).getBlock();
+			
+			if(event.getBlockState().getBlock() != Blocks.AIR) return;
+			
+			if(belowBlock != Blocks.OBSIDIAN && belowBlock != Blocks.BEDROCK) return;
+			
+			asyncPlace();
+			asyncDestroy();
 		}
 	}
 	
 	public boolean destroy() {
-		if(!timer.check(destroyDelay.getValue().longValue())) return false;
-		
-		timer.reset();
+		if(acted) return false;
 		
 		long now = System.currentTimeMillis();
 		long timeout = destroyBlacklistTimeout.getValue().longValue();
@@ -287,8 +319,16 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 		    var destroy = destroyEntity.get();
 		    
 		    if(destroyBlacklist.getValue() && destroyed.containsKey(destroy.getKey().getId())) {
-		    	System.out.println("Dupe");
 		    	return false;
+		    }
+
+		    if(rotate.getValue()) {
+				if(Kryos.rotationManager.hasRotated()) return false;
+				
+				float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
+				
+				Kryos.rotationManager.rotate(rot[0], rot[1]);
+				pos = Optional.of(destroy.getKey().blockPosition());
 		    }
 		    
 		    destroyed.put(destroy.getKey().getId(), System.currentTimeMillis());
@@ -296,19 +336,8 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 		    mc.gameMode.attack(mc.player, destroy.getKey());
 		    mc.player.swing(InteractionHand.MAIN_HAND);
 		    
-		    // Early removal
-		    if(earlyRemove.getValue()) {
-		    	mc.level.removeEntity(destroy.getKey().getId(), RemovalReason.KILLED);
-		    }
-		    
-		    if(pos != null && pos.equals(destroy.getKey().blockPosition())) return false;
+		    if(pos.isPresent() && pos.get().equals(destroy.getKey().blockPosition())) return false;
 
-		    if(rotate.getValue()) {
-				float[] rot = RotationUtil.getRotationsTo(destroy.getKey().position());
-				Kryos.rotationManager.rotate(rot[0], rot[1]);
-				pos = destroy.getKey().blockPosition();
-		    }
-		    
 			return true;
 		}
 		
@@ -316,6 +345,8 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 	}
 
 	public boolean place() {
+		if(acted) return false;
+		
 		if (place.getValue() && placePos.isPresent()) {
 			if(!Kryos.lockManager.acquire(this)) return false;
 		    var place = placePos.get();
@@ -325,10 +356,13 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 			if(!InventoryUtil.hasItemIn(Items.END_CRYSTAL, hand))
 				return false;
 			
-			if(destroyBlacklist.getValue() && pos != null && pos.equals(place.getKey())) return false;
+			if(destroyBlacklist.getValue() && pos.isPresent() && pos.get().equals(place.getKey())) return false;
 			
 			if(rotate.getValue()) {
 				float[] rot = RotationUtil.getRotationsTo(place.getKey(), Direction.UP);
+			
+				if(Kryos.rotationManager.hasRotated()) return false;
+				
 				Kryos.rotationManager.rotate(rot[0], rot[1]);
 			}
 			
@@ -344,7 +378,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 	        );
 		    mc.player.swing(hand);
 		    
-		    pos = place.getKey();
+		    pos = Optional.of(place.getKey());
 		    
 		    return true;
 	    }
@@ -352,97 +386,63 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 		return false;
 	}
 	
-	private void calc() {
-		if(async.getValue()) {
-			// Asynchronous
-		    if (!scanInProgress) {
-		        scanInProgress = true;
-	
-		        executor.submit(() -> {
-		            try {
-		                placePos = getPlace();
-		            } finally {
-		                scanInProgress = false;
-		            }
-		        });
-		    }
-		} else {
-			// Synchronized
+	public void asyncPlace() {
+		executor.submit(() -> {
             placePos = getPlace();
-		}
-		
-        destroyEntity = getDestroy();
+            place();
+		});
+	}
+	
+	public void asyncDestroy() {
+		executor.submit(() -> {
+            destroyEntity = getDestroy();
+            destroy();
+		});
 	}
 	
 	private Optional<Map.Entry<BlockPos, Float>> getPlace() {
-		int reach = (int) (this.reach.getValue() + 1);
-		
-		BlockPos bestPos = null;
+	    int reach = (int) (this.reach.getValue() + 1);
+
+	    BlockPos bestPos = null;
 	    float bestDamage = 0f;
-	    
-		for(int i = -reach; i < reach; i++) {
-			for(int j = -reach; j < reach; j++) {
-				for(int k = -reach; k < reach; k++) {
-					// Place availability
-					BlockPos pos = mc.player.blockPosition().offset(i, j, k);
-					Block block = mc.level.getBlockState(pos).getBlock();
-					
-					if(block != Blocks.OBSIDIAN && block != Blocks.BEDROCK) continue;
-					
-					BlockPos above = pos.above();
-					Block aboveBlock = mc.level.getBlockState(above).getBlock();
 
-					if(aboveBlock != Blocks.AIR) continue;
+	    for (int i = -reach; i < reach; i++) {
+	        for (int j = -reach; j < reach; j++) {
+	            for (int k = -reach; k < reach; k++) {
 
-					if(CrystalUtil.placeIntercect(above)) continue;
+	                // Place availability
+	                BlockPos pos = mc.player.blockPosition().offset(i, j, k);
+	                Block block = mc.level.getBlockState(pos).getBlock();
 
-					// In range
-					Vec3 point = BlockUtil.getClosestPointOnFace(pos, Direction.UP);
-					if(point.distanceTo(mc.player.getEyePosition()) > this.reach.getValue()) continue;
+	                if (block != Blocks.OBSIDIAN && block != Blocks.BEDROCK) continue;
 
-					float damage = 0;
-					
-					float self = DamageUtil.getCrystalDamage(mc.player, mc.player.position(), above.getBottomCenter());
+	                BlockPos above = pos.above();
+	                Block aboveBlock = mc.level.getBlockState(above).getBlock();
 
-					for(Entity entity : mc.level.entitiesForRendering()) {
-						if(entity == mc.player) continue;
-						
-						if(entity.distanceTo(mc.player) > 16) continue;
-						
-						if(!(entity instanceof LivingEntity living)) continue;
+	                if (aboveBlock != Blocks.AIR) continue;
 
-						float d = DamageUtil.getCrystalDamage(living, getPosition(living), above.getBottomCenter());
-						
-						// Minimum damage. It gets ignore if the crystal count is lethal
-						boolean lethal = living.getHealth() - (d * lethalMultiplier.getValue()) <= 0f;
-						if(d < minDamage.getValue() && !lethal) continue;
+	                if (CrystalUtil.placeIntercect(above)) continue;
 
-						if(antiSuicide.getValue()) {
-							if(self > maxSuicideDamage.getValue()) continue;
-							
-							// Ignores the position if it would bring the player below minimum health
-							if(mc.player.getHealth() - self < minSuicideHealth.getValue()) continue;
-						}
-						
-						if(d > damage) {
-							damage = d;
-						}
-					}
-					
-					if (damage > bestDamage) {
+	                // In range
+	                Vec3 point = BlockUtil.getClosestPointOnFace(pos, Direction.UP);
+	                if (point.distanceTo(mc.player.getEyePosition()) > this.reach.getValue()) continue;
+
+	                float self = DamageUtil.getCrystalDamage(mc.player, mc.player.position(), above.getBottomCenter());
+	                float damage = targetsDamage(above.getBottomCenter(), self);
+
+	                if (damage > bestDamage) {
 	                    bestDamage = damage;
 	                    bestPos = pos;
 	                }
-				}
-			}
-		}
+	            }
+	        }
+	    }
 
 	    if (bestPos == null) return Optional.empty();
 
 	    return Optional.of(Map.entry(bestPos, bestDamage));
 	}
 	
-
 	private Optional<Map.Entry<EndCrystal, Float>> getDestroy() {
 	    EndCrystal bestCrystal = null;
 	    float bestDamage = 0f;
@@ -455,31 +455,7 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 	            continue;
 
 	        float self = DamageUtil.getCrystalDamage(mc.player, mc.player.position(), crystal.position());
-	        float damage = 0f;
-
-	        for (Entity target : mc.level.entitiesForRendering()) {
-	            if (target == mc.player) continue;
-	            if (target.distanceTo(mc.player) > 16) continue;
-
-	            if (!(target instanceof LivingEntity living)) continue;
-
-	            float d = DamageUtil.getCrystalDamage(living, getPosition(living), crystal.position());
-
-				// Minimum damage. It gets ignore if the crystal count is lethal
-	            boolean lethal = living.getHealth() - (d * lethalMultiplier.getValue()) <= 0f;
-	            if (d < minDamage.getValue() && !lethal) continue;
-
-	            if (antiSuicide.getValue()) {
-	                if (self > maxSuicideDamage.getValue()) continue;
-
-					// Ignores the position if it would bring the player below minimum health
-	                if (mc.player.getHealth() - self < minSuicideHealth.getValue()) continue;
-	            }
-
-	            if (d > damage) {
-	                damage = d;
-	            }
-	        }
+	        float damage = targetsDamage(crystal.position(), self);
 
 	        if (damage > bestDamage) {
 	            bestDamage = damage;
@@ -491,27 +467,46 @@ public class CrystalAura extends LockingFeature implements PlayerTickListener, S
 
 	    return Optional.of(Map.entry(bestCrystal, bestDamage));
 	}
-
-	private Vec3 getPosition(Entity entity) {
-		Vec3 pos = entity.position();
-		
-		if(predict.getValue()) {
-			Vec3 vel = entity.getDeltaMovement();
-			float predict = predictAmount();
-			vel.multiply(new Vec3(predict, predict, predict));
-			pos.add(vel);
-		}
-		
-		return pos;
-	}
 	
-	private float predictAmount() {
-		return predict.getValue() ? predictAmount.getValue() : 0;
+	private float targetsDamage(Vec3 explosionPos, float selfDamage) {
+	    float damage = 0f;
+
+	    for (Entity target : mc.level.entitiesForRendering()) {
+	        if (target == mc.player) continue;
+	        if (target.distanceTo(mc.player) > 16) continue;
+
+	        if (!(target instanceof LivingEntity living)) continue;
+
+	        float d = DamageUtil.getCrystalDamage(living, living.position(), explosionPos);
+
+	        // Minimum damage. It gets ignore if the crystal count is lethal
+	        boolean lethal = living.getHealth() - (d * lethalMultiplier.getValue()) <= 0f;
+	        if (d < minDamage.getValue() && !lethal) continue;
+
+	        if (antiSuicide.getValue()) {
+	            if (selfDamage > maxSuicideDamage.getValue()) continue;
+
+	            // Ignores the position if it would bring the player below minimum health
+	            if (mc.player.getHealth() - selfDamage < minSuicideHealth.getValue()) continue;
+	        }
+
+	        if (d > damage) {
+	            damage = d;
+	        }
+	    }
+
+	    return damage;
 	}
 
 	@Override
 	public void onPost(Post event) {
-		
+		if(async.getValue()) {
+			if(tickThread.getValue()) {
+				asyncDestroy();
+				asyncPlace();
+			}
+		}
+		acted = false;
 	}
 	
 	static enum Action {
